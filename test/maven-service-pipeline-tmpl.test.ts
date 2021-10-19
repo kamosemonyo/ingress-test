@@ -11,9 +11,7 @@ const artifactsBucket = 'pipeline-artifacts';
 
 test('Stack Snapshot', () => {
   const app = new cdk.App({ context: { repositoryName }});
-
   const stack = new MavenServicePipeline(app, toValidConstructName(repositoryName), {});
-
   app.synth();
 
   expect(SynthUtils.toCloudFormation(stack)).toMatchSnapshot();
@@ -85,16 +83,11 @@ test('Creates all required resources', () => {
     }
   });
 
-  // Creates build ECR repository
+  // Creates ECR repository
   expect(stack).toHaveResource('AWS::ECR::Repository', {
     RepositoryName: repositoryName,
     ImageTagMutability: 'IMMUTABLE'
   });
-
-  // // Creates build CB project
-  // expect(stack).toHaveResource('', {
-
-  // });
 });
 
 test('Builds pipeline correctly', () => {

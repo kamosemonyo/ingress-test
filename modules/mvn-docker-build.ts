@@ -4,7 +4,8 @@ import { CodeBuildAction } from "@aws-cdk/aws-codepipeline-actions";
 import { BuildSpec, PipelineProject } from '@aws-cdk/aws-codebuild';
 import { Artifact } from '@aws-cdk/aws-codepipeline';
 import { toValidConstructName } from '../lib/util';
-import { codeBuildSpecVersion, defaultCodeBuildEnvironment } from '../lib/constants';
+import { codeBuildSpecVersion, defaultCodeBuildEnvironment, mainGitBranch } from '../lib/constants';
+import { CommonCommands } from '../lib/commands';
 
 interface parameters {
   branch: string
@@ -12,27 +13,28 @@ interface parameters {
   propertiesFilePath: string
   pomFilePath: string
   ecrRegion: string
-  ecrAccount: string,
+  ecrAccount: string
+  ssmRegion: string
   inputArtifact: Artifact
   outputArtifact: Artifact
 };
 
-export const getMavenDockerBuildAction = (scope: Construct, params: parameters): CodeBuildAction => {
+export const createMavenDockerBuildAction = (scope: Construct, params: parameters): CodeBuildAction => {
   const buildAction = new CodeBuildAction({
-    actionName: 'Maven_Docker_Build',
+    actionName: 'Docker_Build',
     input: params.inputArtifact,
     outputs: [params.outputArtifact],
-    project: getMavenDockerBuildProject(scope, params),
+    project: createMavenDockerBuildProject(scope, params),
   });
 
   return buildAction;
 };
 
 
-const getMavenDockerBuildProject = (scope: Construct, params: parameters): PipelineProject => {
+const createMavenDockerBuildProject = (scope: Construct, params: parameters): PipelineProject => {
   const buildProject = new PipelineProject(scope, `${toValidConstructName(params.repositoryName)}CodeBuildProject`, {
     projectName: `${params.repositoryName}-${params.branch}-build`,
-    buildSpec: getMavenDockerBuildSpec(params),
+    buildSpec: buildMavenDockerBuildSpec(params),
     environment: defaultCodeBuildEnvironment,
   });
 
@@ -51,7 +53,7 @@ const getMavenDockerBuildProject = (scope: Construct, params: parameters): Pipel
   return buildProject;
 }
 
-const getMavenDockerBuildSpec = (params: parameters): BuildSpec => {
+const buildMavenDockerBuildSpec = (params: parameters): BuildSpec => {
   const buildSpec = BuildSpec.fromObject({
     version: codeBuildSpecVersion,
     phases: {
@@ -64,9 +66,10 @@ const getMavenDockerBuildSpec = (params: parameters): BuildSpec => {
         commands: [
           'java -version',
           'mvn -version',
+          ...CommonCommands.setupMvnSettings(params.ssmRegion),
           'mvn clean install',
           `cp ${params.propertiesFilePath} docker/files`,
-          `export VERSION=\`grep -oP \'version=\\K.*\' ${params.propertiesFilePath}\``,
+          ...exportVersionCommands(params.branch, params.propertiesFilePath),
           'echo $VERSION > VERSION',
           `docker build -t ${params.ecrAccount}.dkr.ecr.${params.ecrRegion}.amazonaws.com/${params.repositoryName}:$VERSION .`,
           `aws ecr get-login-password --region ${params.ecrRegion} | docker login --username AWS --password-stdin ${params.ecrAccount}.dkr.ecr.${params.ecrRegion}.amazonaws.com`,
@@ -79,8 +82,23 @@ const getMavenDockerBuildSpec = (params: parameters): BuildSpec => {
         'VERSION',
         params.propertiesFilePath,
       ],
-    },    
+    },
+    cache: {
+      paths: ['/root/.m2/**/*'],
+    }
   });
 
   return buildSpec;
+};
+
+const exportVersionCommands = (branch: string, propertiesFile: string): string[] => {
+  if (branch == mainGitBranch) {
+    return [`export VERSION=\`grep -oP \'version=\\K.*\' ${propertiesFile}\``];
+  } else {
+    return [
+      `CI_COMMIT_SHA=$(git rev-parse --short HEAD)`,
+      `export VERSION=\`grep -oP \'version=\\K.*\' ${propertiesFile}\``,
+      `export VERSION=$VERSION-$CI_COMMIT_SHA`,
+    ];
+  }
 };
