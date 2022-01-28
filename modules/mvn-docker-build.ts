@@ -250,7 +250,7 @@ const buildMavenDeployBuildSpec = (params: deployJobParams): BuildSpec => {
             \' .k8s/deployment.yml`,
             // Create K8s service manifest files (headless)
             `bin/yq e -i \' \
-            .metadata.name = "${params.repositoryName}-service" | \
+            .metadata.name = "${params.repositoryName}-service-hl" | \
             .metadata.labels.project = "${params.repositoryName}" | \
             .metadata.labels.app = "${params.repositoryName}" | \
             .metadata.labels.["target-deployment"] = "${params.repositoryName}" | \
@@ -258,7 +258,7 @@ const buildMavenDeployBuildSpec = (params: deployJobParams): BuildSpec => {
             \' .k8s/svc-headless.yml`,
             // Create K8s service manifest files
             `bin/yq e -i \' \
-            .metadata.name = "${params.repositoryName}-service-hl" | \
+            .metadata.name = "${params.repositoryName}-service" | \
             .metadata.labels.project = "${params.repositoryName}" | \
             .metadata.labels.app = "${params.repositoryName}" | \
             .metadata.labels.["target-deployment"] = "${params.repositoryName}" | \
