@@ -1,18 +1,19 @@
-import { Bucket } from '@aws-cdk/aws-s3';
-import { Repository } from '@aws-cdk/aws-codecommit';
-import { Action, Artifact } from '@aws-cdk/aws-codepipeline';
-import { Construct, SecretValue } from '@aws-cdk/core';
+import { Construct } from 'constructs';
+import { SecretValue } from 'aws-cdk-lib';
+import { Bucket } from 'aws-cdk-lib/aws-s3';
+import { Repository } from 'aws-cdk-lib/aws-codecommit';
+import { Action, Artifact } from 'aws-cdk-lib/aws-codepipeline';
 import {
   CodeCommitSourceAction,
   GitHubSourceAction,
   S3SourceAction,
-} from '@aws-cdk/aws-codepipeline-actions';
+} from 'aws-cdk-lib/aws-codepipeline-actions';
+
+import { GITHUB_TOKEN_SECRET_NAME } from '../lib/constants';
 
 const s3Source: string = 's3';
 const codeCommitSource: string = 'codecommit';
 const githubSource: string = 'github';
-
-const githubTokenSecretName: string = 'github-mmi-holdings-ces-token';
 
 interface parameters {
   githubOrg?: string
@@ -54,7 +55,7 @@ export const getSourceAction = (scope: Construct, params: parameters): Action =>
         branch: params.branch,
         owner: params.githubOrg!,
         repo: params.repositoryName!,
-        oauthToken: SecretValue.secretsManager(githubTokenSecretName),
+        oauthToken: SecretValue.secretsManager(GITHUB_TOKEN_SECRET_NAME),
       });
   }
 };

@@ -1,13 +1,14 @@
-import { Construct, Stack, StackProps } from "@aws-cdk/core";
-import { IRepository } from '@aws-cdk/aws-ecr';
-import * as ecs from '@aws-cdk/aws-ecs';
+import { Construct } from "constructs";
+import { StackProps } from "aws-cdk-lib/core";
+import { IRepository } from 'aws-cdk-lib/aws-ecr';
+import * as ecs from 'aws-cdk-lib/aws-ecs';
 
 import { toValidConstructName } from '../lib/util';
 import { environmentConfig } from "../lib/config";
-import { BuildSpec, PipelineProject } from "@aws-cdk/aws-codebuild";
+import { BuildSpec, PipelineProject } from "aws-cdk-lib/aws-codebuild";
 import { codeBuildSpecVersion, defaultCodeBuildEnvironment } from "../lib/constants";
-import { CodeBuildAction } from "@aws-cdk/aws-codepipeline-actions";
-import { Artifact } from "@aws-cdk/aws-codepipeline";
+import { CodeBuildAction } from "aws-cdk-lib/aws-codepipeline-actions";
+import { Artifact } from "aws-cdk-lib/aws-codepipeline";
 import { CommonCommands } from "../lib/commands";
 
 interface parameters extends StackProps {

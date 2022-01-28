@@ -3,4 +3,4 @@
   propertiesFilePath: pfm-services-deployment/target/maven-archiver/pom.properties
   branches:
     - master
-    - develop 
+    # - develop

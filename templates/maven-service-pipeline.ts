@@ -1,24 +1,28 @@
-import { CfnParameter, Construct, Stack, StackProps } from "@aws-cdk/core";
-import { Bucket, IBucket } from '@aws-cdk/aws-s3';
-import { Artifact, Pipeline, StageProps } from "@aws-cdk/aws-codepipeline";
+import { Construct  } from "constructs";
+import { CfnParameter, RemovalPolicy, Stack, StackProps } from "aws-cdk-lib";
+import { aws_s3 as s3 } from 'aws-cdk-lib';
+import { aws_codepipeline as codepipeline } from "aws-cdk-lib";
+import { aws_codepipeline_actions as pipeline_actions } from "aws-cdk-lib";
+import { aws_ec2 as ec2 } from "aws-cdk-lib";
+
 import { createEcrRepository } from "../modules/ecr-repository";
-import { createMavenDockerBuildAction } from "../modules/mvn-docker-build";
 import { getSourceAction } from "../modules/code-source";
 import { toValidConstructName } from "../lib/util";
-import { createEksDeployAction } from "../modules/eks-deployment";
-import { ManualApprovalAction } from "@aws-cdk/aws-codepipeline-actions";
-import { mainGitBranch } from "../lib/constants";
+import { CODE_BUILD_VPC_NAME, EKS_NON_PROD_CLUSTER_NAME, mainGitBranch } from "../lib/constants";
+import { createMavenDeployAction, createMavenDockerBuildAction, createMavenRelease } from "../modules/mvn-docker-build";
 
-const pipelineArtifactsBucket: string = 'pipeline-artifacts';
-const defaultSsmRegion: string = 'eu-west-1';
-
-interface stackProps extends StackProps {}
+interface stackProps extends StackProps {
+  repositoryName: string
+}
 
 export class MavenServicePipeline extends Stack {
   constructor(scope: Construct, id: string, props: stackProps) {
     super(scope, id, props);
 
-    const artifactsBucket: IBucket = Bucket.fromBucketName(this, 'ArtifactsBucket', pipelineArtifactsBucket);
+    const artifactsBucket: s3.IBucket = new s3.Bucket(this, 'ArtifactsBucket', {
+      removalPolicy: RemovalPolicy.DESTROY,
+      autoDeleteObjects: true,
+    });
 
     const githubOrgParam = new CfnParameter(this, 'githubOrg', {
       type: 'String',
@@ -69,19 +73,23 @@ export class MavenServicePipeline extends Stack {
       default: 1,
     });
 
-    const repositoryName: string = this.node.tryGetContext('repositoryName');
+    const repositoryName = props.repositoryName;
     const branch: string = branchParam.valueAsString;
 
     if (!repositoryName) {
-      throw Error('Expected context [repositoryName] to be defined.')
+      throw Error('Expected context [repositoryName] to be defined.');
     }
 
-    const ecrRepository = createEcrRepository(this, { repositoryName, env: { account: this.account, region: 'af-south-1' }});
+    const ecrRepository = createEcrRepository(this, { repositoryName });
 
-    const sourceCodeArtifact = new Artifact();
-    const buildOutputArtifact = new Artifact();
+    this.exportValue(ecrRepository.repositoryName, { name: `${props.repositoryName}-ecr-repository` });
+    this.exportValue(ecrRepository.repositoryArn, { name: `${props.repositoryName}-ecr-repository-arn` });
+    this.exportValue(ecrRepository.repositoryUri, { name: `${props.repositoryName}-ecr-repository-uri` });
 
-    const pipelineStages: StageProps[] = [];
+    const sourceCodeArtifact = new codepipeline.Artifact();
+    const buildOutputArtifact = new codepipeline.Artifact();
+
+    const pipelineStages: codepipeline.StageProps[] = [];
 
     pipelineStages.push({
       stageName: 'Source',
@@ -101,23 +109,28 @@ export class MavenServicePipeline extends Stack {
     pipelineStages.push({
       stageName: 'Approve_Build',
       actions: [
-        new ManualApprovalAction({
+        new pipeline_actions.ManualApprovalAction({
           actionName: 'Approve',
         }),
       ],
+    });
+
+    const vpc = ec2.Vpc.fromLookup(this, 'CodeBuildVpc', {
+      vpcName: CODE_BUILD_VPC_NAME,
+      isDefault: false,
     });
 
     pipelineStages.push({
       stageName: 'Build',
       actions: [
         createMavenDockerBuildAction(this, {
+          vpc,
           branch,
           repositoryName,
-          ssmRegion: defaultSsmRegion,
+          account: Stack.of(this).account,
+          region: Stack.of(this).region,
           propertiesFilePath: propertiesFilePathParam.valueAsString,
           pomFilePath: pomFilePathParam.valueAsString,
-          ecrRegion: ecrRepository.env.region,
-          ecrAccount: ecrRepository.env.account,
           inputArtifact: sourceCodeArtifact,
           outputArtifact: buildOutputArtifact,
         }),
@@ -125,28 +138,84 @@ export class MavenServicePipeline extends Stack {
     });
 
     pipelineStages.push({
-      stageName: 'Approve_Deploy',
+      stageName: 'Publish',
       actions: [
-        new ManualApprovalAction({
-          actionName: 'Approve',
+        createMavenRelease(this, {
+          branch,
+          repositoryName,
+          region: Stack.of(this).region,
+          account: Stack.of(this).account,
+          pomFilePath: pomFilePathParam.valueAsString,
+          githubOrgName: githubOrgParam.valueAsString,
+          extraInputs: [ buildOutputArtifact ],
+          inputArtifact: sourceCodeArtifact,
+        })
+      ],
+    });
+
+    const devDeployOutputArtifact = new codepipeline.Artifact();
+
+    pipelineStages.push({
+      stageName: 'Deploy_Dev',
+      actions: [
+        createMavenDeployAction(this, {
+          vpc,
+          branch,
+          repositoryName,
+          environment: 'dev',
+          account: Stack.of(this).account,
+          replicas: replicasParam.valueAsString,
+          clusterName: EKS_NON_PROD_CLUSTER_NAME,
+          extraInputs: [ buildOutputArtifact ],
+          inputArtifact: sourceCodeArtifact,
+          outputs: [devDeployOutputArtifact]
         }),
       ],
     });
 
     pipelineStages.push({
-      stageName: 'Deploy',
+      stageName: 'Approve_Deploy_Pre',
       actions: [
-        createEksDeployAction(this, {
-          project: repositoryName,
-          replicas: replicasParam.valueAsNumber,
-          environment: resolveEnvironment(branchParam.valueAsString),
-          branch: branchParam.valueAsString,
-          inputArtifact: buildOutputArtifact,
+        new pipeline_actions.ManualApprovalAction({
+          actionName: 'Approve',
         }),
       ],
     });
 
-    new Pipeline(this, `${toValidConstructName(repositoryName)}Pipeline`, {
+    const preDeployOutputArtifact = new codepipeline.Artifact();
+
+    pipelineStages.push({
+      stageName: 'Deploy_PRE',
+      actions: [
+        createMavenDeployAction(this, {
+          vpc,
+          branch,
+          repositoryName,
+          environment: 'preprod',
+          clusterName: EKS_NON_PROD_CLUSTER_NAME,
+          replicas: replicasParam.valueAsString,
+          extraInputs: [ buildOutputArtifact ],
+          account: Stack.of(this).account,
+          inputArtifact: sourceCodeArtifact,
+          outputs: [preDeployOutputArtifact]
+        }),
+      ],
+    });
+
+    // pipelineStages.push({
+    //   stageName: 'Deploy',
+    //   actions: [
+    //     createEksDeployAction(this, {
+    //       project: repositoryName,
+    //       replicas: replicasParam.valueAsNumber,
+    //       environment: resolveEnvironment(branchParam.valueAsString),
+    //       branch: branchParam.valueAsString,
+    //       inputArtifact: buildOutputArtifact,
+    //     }),
+    //   ],
+    // });
+
+    new codepipeline.Pipeline(this, `${toValidConstructName(repositoryName)}Pipeline`, {
       pipelineName: `${repositoryName}-${branchParam.valueAsString}`,
       stages: pipelineStages,
       artifactBucket: artifactsBucket,
@@ -158,7 +227,7 @@ const resolveEnvironment = (branch: string): string => {
   if (branch === mainGitBranch) {
     return 'prod';
   } else if(branch === 'release') {
-    return 'pre';
+    return 'preprod';
   }
 
   return 'dev';

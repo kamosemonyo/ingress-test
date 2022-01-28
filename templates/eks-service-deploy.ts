@@ -1,11 +1,23 @@
 import * as constructs from 'constructs';
 import * as cdk8s from 'cdk8s';
-import { CfnParameter, Construct, Stack, StackProps } from '@aws-cdk/core';
+import { CfnParameter, Stack, StackProps } from 'aws-cdk-lib';
 
-import { Container, ContainerPort, EnvVar, IntOrString, KubeDeployment, KubeService, Probe, Quantity, SecurityContext, Volume, VolumeMount } from '../vendor/cdk8s/k8s';
 import { ImagePullPolicy } from 'cdk8s-plus-17';
 import { multiplyMoneyK8sSecret, validEnvironmentNames, } from '../lib/constants';
-import { FargateCluster } from '@aws-cdk/aws-eks';
+import { FargateCluster } from 'aws-cdk-lib/aws-eks';
+
+import { Container,
+  ContainerPort,
+  EnvVar,
+  IntOrString,
+  KubeDeployment,
+  KubeService,
+  Quantity,
+  SecurityContext,
+  Volume,
+  VolumeMount,
+} from '../vendor/cdk8s/k8s';
+
 
 interface stackProps extends StackProps {
   ecrRegion: string
@@ -15,7 +27,7 @@ interface stackProps extends StackProps {
 }
 
 export class EcsServiceDeploy extends Stack {
-  constructor(scope: Construct, id: string, props: stackProps) {
+  constructor(scope: constructs.Construct, id: string, props: stackProps) {
     super(scope, id, props);
 
     const projectParam = new CfnParameter(this, 'project', {

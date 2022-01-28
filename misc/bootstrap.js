@@ -25,11 +25,12 @@ try {
 }
 
 function buildCdkDeployCmd(repository, propertiesFilePath, replicas, branch) {
-  return `cdk diff -c template=maven-service-pipeline \
+  return `cdk deploy -c template=maven-service-pipeline \
   -c repositoryName=${repository} \
   --parameters propertiesFile=\"${propertiesFilePath}\" \
   --parameters branch=${branch} \
-  --parameters replicas=${replicas} \
-  --all
+  --parameters replicas=${replicas}
   `;
 }
+
+// cdk deploy -c template=maven-service-pipeline -c repositoryName=pfm-services --parameters propertiesFile="pfm-services-deployment/target/maven-archiver/pom.properties" --parameters branch=master --parameters replicas=1

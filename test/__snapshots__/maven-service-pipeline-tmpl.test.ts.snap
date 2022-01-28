@@ -2,28 +2,121 @@
 
 exports[`Stack Snapshot 1`] = `
 Object {
+  "Outputs": Object {
+    "Exportpfmserviceecrrepository": Object {
+      "Export": Object {
+        "Name": "pfm-service-ecr-repository",
+      },
+      "Value": Object {
+        "Ref": "PfmServiceEcrRepository23177656",
+      },
+    },
+    "Exportpfmserviceecrrepositoryarn": Object {
+      "Export": Object {
+        "Name": "pfm-service-ecr-repository-arn",
+      },
+      "Value": Object {
+        "Fn::GetAtt": Array [
+          "PfmServiceEcrRepository23177656",
+          "Arn",
+        ],
+      },
+    },
+    "Exportpfmserviceecrrepositoryuri": Object {
+      "Export": Object {
+        "Name": "pfm-service-ecr-repository-uri",
+      },
+      "Value": Object {
+        "Fn::Join": Array [
+          "",
+          Array [
+            Object {
+              "Fn::Select": Array [
+                4,
+                Object {
+                  "Fn::Split": Array [
+                    ":",
+                    Object {
+                      "Fn::GetAtt": Array [
+                        "PfmServiceEcrRepository23177656",
+                        "Arn",
+                      ],
+                    },
+                  ],
+                },
+              ],
+            },
+            ".dkr.ecr.",
+            Object {
+              "Fn::Select": Array [
+                3,
+                Object {
+                  "Fn::Split": Array [
+                    ":",
+                    Object {
+                      "Fn::GetAtt": Array [
+                        "PfmServiceEcrRepository23177656",
+                        "Arn",
+                      ],
+                    },
+                  ],
+                },
+              ],
+            },
+            ".",
+            Object {
+              "Ref": "AWS::URLSuffix",
+            },
+            "/",
+            Object {
+              "Ref": "PfmServiceEcrRepository23177656",
+            },
+          ],
+        ],
+      },
+    },
+  },
   "Parameters": Object {
+    "BootstrapVersion": Object {
+      "Default": "/cdk-bootstrap/hnb659fds/version",
+      "Description": "Version of the CDK Bootstrap resources in this environment, automatically retrieved from SSM Parameter Store. [cdk:skip]",
+      "Type": "AWS::SSM::Parameter::Value<String>",
+    },
     "branch": Object {
       "Default": "master",
       "Description": "Github/Codecommit source branch",
       "Type": "String",
     },
-    "githuborg": Object {
+    "bucket": Object {
+      "Default": "",
+      "Description": "s3 source bucket name",
+      "Type": "String",
+    },
+    "bucketKey": Object {
+      "Default": "",
+      "Description": "s3 source bucket key",
+      "Type": "String",
+    },
+    "githubOrg": Object {
       "Default": "mmi-holdings-ces",
       "Description": "Github organisation name",
       "Type": "String",
     },
-    "pomfile": Object {
-      "AllowedPattern": "*pom.xml",
+    "pomFile": Object {
       "Default": "pom.xml",
       "Description": "pom.xml file path",
       "Type": "String",
     },
-    "propertiesfile": Object {
+    "propertiesFile": Object {
       "Description": "pom.properties file path",
       "Type": "String",
     },
-    "sourceprovider": Object {
+    "replicas": Object {
+      "Default": 1,
+      "Description": "K8s deployment replicas, defaults to 1",
+      "Type": "Number",
+    },
+    "sourceProvider": Object {
       "AllowedValues": Array [
         "github",
         "codecommit",
@@ -35,61 +128,124 @@ Object {
     },
   },
   "Resources": Object {
-    "PfmServiceCodeBuildEcsDeployProjectC6FDDE22": Object {
+    "ArtifactsBucket2AAC5544": Object {
+      "DeletionPolicy": "Delete",
       "Properties": Object {
-        "Artifacts": Object {
-          "Type": "CODEPIPELINE",
+        "Tags": Array [
+          Object {
+            "Key": "aws-cdk:auto-delete-objects",
+            "Value": "true",
+          },
+        ],
+      },
+      "Type": "AWS::S3::Bucket",
+      "UpdateReplacePolicy": "Delete",
+    },
+    "ArtifactsBucketAutoDeleteObjectsCustomResource0E3B4320": Object {
+      "DeletionPolicy": "Delete",
+      "DependsOn": Array [
+        "ArtifactsBucketPolicy852CB646",
+      ],
+      "Properties": Object {
+        "BucketName": Object {
+          "Ref": "ArtifactsBucket2AAC5544",
         },
-        "EncryptionKey": "alias/aws/s3",
-        "Environment": Object {
-          "ComputeType": "BUILD_GENERAL1_SMALL",
-          "Image": "aws/codebuild/standard:5.0",
-          "ImagePullCredentialsType": "CODEBUILD",
-          "PrivilegedMode": false,
-          "Type": "LINUX_CONTAINER",
-        },
-        "Name": Object {
-          "Fn::Join": Array [
-            "",
-            Array [
-              "pfm-service-",
-              Object {
-                "Ref": "branch",
-              },
-              "-deploy",
-            ],
-          ],
-        },
-        "ServiceRole": Object {
+        "ServiceToken": Object {
           "Fn::GetAtt": Array [
-            "PfmServiceCodeBuildEcsDeployProjectRole648B05E0",
+            "CustomS3AutoDeleteObjectsCustomResourceProviderHandler9D90184F",
             "Arn",
           ],
         },
-        "Source": Object {
-          "BuildSpec": "{
-  \\"version\\": \\"0.2\\",
-  \\"phases\\": {
-    \\"install\\": {
-      \\"commands\\": [
-        \\"env\\",
-        \\"ls -al\\",
-        \\"echo \\\\\\"Installing AWS CDK\\\\\\"\\",
-        \\"npm install -g aws-cdk typescript\\",
-        \\"cdk --version\\"
-      ]
+      },
+      "Type": "Custom::S3AutoDeleteObjects",
+      "UpdateReplacePolicy": "Delete",
     },
-    \\"build\\": {
-      \\"commands\\": []
-    }
-  }
-}",
-          "Type": "CODEPIPELINE",
+    "ArtifactsBucketPolicy852CB646": Object {
+      "Properties": Object {
+        "Bucket": Object {
+          "Ref": "ArtifactsBucket2AAC5544",
+        },
+        "PolicyDocument": Object {
+          "Statement": Array [
+            Object {
+              "Action": Array [
+                "s3:GetBucket*",
+                "s3:List*",
+                "s3:DeleteObject*",
+              ],
+              "Effect": "Allow",
+              "Principal": Object {
+                "AWS": Object {
+                  "Fn::GetAtt": Array [
+                    "CustomS3AutoDeleteObjectsCustomResourceProviderRole3B1BD092",
+                    "Arn",
+                  ],
+                },
+              },
+              "Resource": Array [
+                Object {
+                  "Fn::GetAtt": Array [
+                    "ArtifactsBucket2AAC5544",
+                    "Arn",
+                  ],
+                },
+                Object {
+                  "Fn::Join": Array [
+                    "",
+                    Array [
+                      Object {
+                        "Fn::GetAtt": Array [
+                          "ArtifactsBucket2AAC5544",
+                          "Arn",
+                        ],
+                      },
+                      "/*",
+                    ],
+                  ],
+                },
+              ],
+            },
+          ],
+          "Version": "2012-10-17",
         },
       },
-      "Type": "AWS::CodeBuild::Project",
+      "Type": "AWS::S3::BucketPolicy",
     },
-    "PfmServiceCodeBuildEcsDeployProjectRole648B05E0": Object {
+    "CustomS3AutoDeleteObjectsCustomResourceProviderHandler9D90184F": Object {
+      "DependsOn": Array [
+        "CustomS3AutoDeleteObjectsCustomResourceProviderRole3B1BD092",
+      ],
+      "Properties": Object {
+        "Code": Object {
+          "S3Bucket": "cdk-hnb659fds-assets-23456789111-af-south-1",
+          "S3Key": "bdb08b9984816ecf43301a0c6d8913e270ee2448940b6b95e430dd222a4d90be.zip",
+        },
+        "Description": Object {
+          "Fn::Join": Array [
+            "",
+            Array [
+              "Lambda function for auto-deleting objects in ",
+              Object {
+                "Ref": "ArtifactsBucket2AAC5544",
+              },
+              " S3 bucket.",
+            ],
+          ],
+        },
+        "Handler": "__entrypoint__.handler",
+        "MemorySize": 128,
+        "Role": Object {
+          "Fn::GetAtt": Array [
+            "CustomS3AutoDeleteObjectsCustomResourceProviderRole3B1BD092",
+            "Arn",
+          ],
+        },
+        "Runtime": "nodejs12.x",
+        "Timeout": 900,
+      },
+      "Type": "AWS::Lambda::Function",
+    },
+    "CustomS3AutoDeleteObjectsCustomResourceProviderRole3B1BD092": Object {
       "Properties": Object {
         "AssumeRolePolicyDocument": Object {
           "Statement": Array [
@@ -97,19 +253,105 @@ Object {
               "Action": "sts:AssumeRole",
               "Effect": "Allow",
               "Principal": Object {
-                "Service": "codebuild.amazonaws.com",
+                "Service": "lambda.amazonaws.com",
               },
             },
           ],
           "Version": "2012-10-17",
         },
+        "ManagedPolicyArns": Array [
+          Object {
+            "Fn::Sub": "arn:\${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole",
+          },
+        ],
       },
       "Type": "AWS::IAM::Role",
     },
-    "PfmServiceCodeBuildEcsDeployProjectRoleDefaultPolicy23D57A21": Object {
+    "DEVPfmServiceEksDeployRolePolicy309AEFFA": Object {
       "Properties": Object {
         "PolicyDocument": Object {
           "Statement": Array [
+            Object {
+              "Action": "sts:AssumeRole",
+              "Effect": "Allow",
+              "Resource": "arn:aws:iam::23456789111:role/eks-deploy",
+            },
+            Object {
+              "Action": "eks:DescribeCluster",
+              "Effect": "Allow",
+              "Resource": "*",
+            },
+            Object {
+              "Action": "ec2:CreateNetworkInterfacePermission",
+              "Condition": Object {
+                "StringEquals": Object {
+                  "ec2:AuthorizedService": "codebuild.amazonaws.com",
+                  "ec2:Subnet": Array [
+                    Object {
+                      "Fn::Join": Array [
+                        "",
+                        Array [
+                          "arn:",
+                          Object {
+                            "Ref": "AWS::Partition",
+                          },
+                          ":ec2:",
+                          Object {
+                            "Ref": "AWS::Region",
+                          },
+                          ":",
+                          Object {
+                            "Ref": "AWS::AccountId",
+                          },
+                          ":subnet/p-12345",
+                        ],
+                      ],
+                    },
+                    Object {
+                      "Fn::Join": Array [
+                        "",
+                        Array [
+                          "arn:",
+                          Object {
+                            "Ref": "AWS::Partition",
+                          },
+                          ":ec2:",
+                          Object {
+                            "Ref": "AWS::Region",
+                          },
+                          ":",
+                          Object {
+                            "Ref": "AWS::AccountId",
+                          },
+                          ":subnet/p-67890",
+                        ],
+                      ],
+                    },
+                  ],
+                },
+              },
+              "Effect": "Allow",
+              "Resource": Object {
+                "Fn::Join": Array [
+                  "",
+                  Array [
+                    "arn:",
+                    Object {
+                      "Ref": "AWS::Partition",
+                    },
+                    ":ec2:",
+                    Object {
+                      "Ref": "AWS::Region",
+                    },
+                    ":",
+                    Object {
+                      "Ref": "AWS::AccountId",
+                    },
+                    ":network-interface/*",
+                  ],
+                ],
+              },
+            },
             Object {
               "Action": Array [
                 "logs:CreateLogGroup",
@@ -126,17 +368,9 @@ Object {
                       Object {
                         "Ref": "AWS::Partition",
                       },
-                      ":logs:",
+                      ":logs:af-south-1:23456789111:log-group:/aws/codebuild/",
                       Object {
-                        "Ref": "AWS::Region",
-                      },
-                      ":",
-                      Object {
-                        "Ref": "AWS::AccountId",
-                      },
-                      ":log-group:/aws/codebuild/",
-                      Object {
-                        "Ref": "PfmServiceCodeBuildEcsDeployProjectC6FDDE22",
+                        "Ref": "PfmServiceDeploydevCodeBuildProjectC0D2A586",
                       },
                     ],
                   ],
@@ -149,17 +383,9 @@ Object {
                       Object {
                         "Ref": "AWS::Partition",
                       },
-                      ":logs:",
+                      ":logs:af-south-1:23456789111:log-group:/aws/codebuild/",
                       Object {
-                        "Ref": "AWS::Region",
-                      },
-                      ":",
-                      Object {
-                        "Ref": "AWS::AccountId",
-                      },
-                      ":log-group:/aws/codebuild/",
-                      Object {
-                        "Ref": "PfmServiceCodeBuildEcsDeployProjectC6FDDE22",
+                        "Ref": "PfmServiceDeploydevCodeBuildProjectC0D2A586",
                       },
                       ":*",
                     ],
@@ -184,17 +410,9 @@ Object {
                     Object {
                       "Ref": "AWS::Partition",
                     },
-                    ":codebuild:",
+                    ":codebuild:af-south-1:23456789111:report-group/",
                     Object {
-                      "Ref": "AWS::Region",
-                    },
-                    ":",
-                    Object {
-                      "Ref": "AWS::AccountId",
-                    },
-                    ":report-group/",
-                    Object {
-                      "Ref": "PfmServiceCodeBuildEcsDeployProjectC6FDDE22",
+                      "Ref": "PfmServiceDeploydevCodeBuildProjectC0D2A586",
                     },
                     "-*",
                   ],
@@ -206,6 +424,134 @@ Object {
                 "s3:GetObject*",
                 "s3:GetBucket*",
                 "s3:List*",
+                "s3:DeleteObject*",
+                "s3:PutObject",
+                "s3:Abort*",
+              ],
+              "Effect": "Allow",
+              "Resource": Array [
+                Object {
+                  "Fn::GetAtt": Array [
+                    "ArtifactsBucket2AAC5544",
+                    "Arn",
+                  ],
+                },
+                Object {
+                  "Fn::Join": Array [
+                    "",
+                    Array [
+                      Object {
+                        "Fn::GetAtt": Array [
+                          "ArtifactsBucket2AAC5544",
+                          "Arn",
+                        ],
+                      },
+                      "/*",
+                    ],
+                  ],
+                },
+              ],
+            },
+          ],
+          "Version": "2012-10-17",
+        },
+        "PolicyName": "DEVPfmServiceEksDeployRolePolicy309AEFFA",
+        "Roles": Array [
+          "eks-deploy",
+        ],
+      },
+      "Type": "AWS::IAM::Policy",
+    },
+    "PREPRODPfmServiceEksDeployRolePolicyEAC8849E": Object {
+      "Properties": Object {
+        "PolicyDocument": Object {
+          "Statement": Array [
+            Object {
+              "Action": "sts:AssumeRole",
+              "Effect": "Allow",
+              "Resource": "arn:aws:iam::23456789111:role/eks-deploy",
+            },
+            Object {
+              "Action": "eks:DescribeCluster",
+              "Effect": "Allow",
+              "Resource": "*",
+            },
+            Object {
+              "Action": "ec2:CreateNetworkInterfacePermission",
+              "Condition": Object {
+                "StringEquals": Object {
+                  "ec2:AuthorizedService": "codebuild.amazonaws.com",
+                  "ec2:Subnet": Array [
+                    Object {
+                      "Fn::Join": Array [
+                        "",
+                        Array [
+                          "arn:",
+                          Object {
+                            "Ref": "AWS::Partition",
+                          },
+                          ":ec2:",
+                          Object {
+                            "Ref": "AWS::Region",
+                          },
+                          ":",
+                          Object {
+                            "Ref": "AWS::AccountId",
+                          },
+                          ":subnet/p-12345",
+                        ],
+                      ],
+                    },
+                    Object {
+                      "Fn::Join": Array [
+                        "",
+                        Array [
+                          "arn:",
+                          Object {
+                            "Ref": "AWS::Partition",
+                          },
+                          ":ec2:",
+                          Object {
+                            "Ref": "AWS::Region",
+                          },
+                          ":",
+                          Object {
+                            "Ref": "AWS::AccountId",
+                          },
+                          ":subnet/p-67890",
+                        ],
+                      ],
+                    },
+                  ],
+                },
+              },
+              "Effect": "Allow",
+              "Resource": Object {
+                "Fn::Join": Array [
+                  "",
+                  Array [
+                    "arn:",
+                    Object {
+                      "Ref": "AWS::Partition",
+                    },
+                    ":ec2:",
+                    Object {
+                      "Ref": "AWS::Region",
+                    },
+                    ":",
+                    Object {
+                      "Ref": "AWS::AccountId",
+                    },
+                    ":network-interface/*",
+                  ],
+                ],
+              },
+            },
+            Object {
+              "Action": Array [
+                "logs:CreateLogGroup",
+                "logs:CreateLogStream",
+                "logs:PutLogEvents",
               ],
               "Effect": "Allow",
               "Resource": Array [
@@ -217,7 +563,10 @@ Object {
                       Object {
                         "Ref": "AWS::Partition",
                       },
-                      ":s3:::pipeline-artifacts",
+                      ":logs:af-south-1:23456789111:log-group:/aws/codebuild/",
+                      Object {
+                        "Ref": "PfmServiceDeploypreprodCodeBuildProject1F9A10DE",
+                      },
                     ],
                   ],
                 },
@@ -229,7 +578,70 @@ Object {
                       Object {
                         "Ref": "AWS::Partition",
                       },
-                      ":s3:::pipeline-artifacts/*",
+                      ":logs:af-south-1:23456789111:log-group:/aws/codebuild/",
+                      Object {
+                        "Ref": "PfmServiceDeploypreprodCodeBuildProject1F9A10DE",
+                      },
+                      ":*",
+                    ],
+                  ],
+                },
+              ],
+            },
+            Object {
+              "Action": Array [
+                "codebuild:CreateReportGroup",
+                "codebuild:CreateReport",
+                "codebuild:UpdateReport",
+                "codebuild:BatchPutTestCases",
+                "codebuild:BatchPutCodeCoverages",
+              ],
+              "Effect": "Allow",
+              "Resource": Object {
+                "Fn::Join": Array [
+                  "",
+                  Array [
+                    "arn:",
+                    Object {
+                      "Ref": "AWS::Partition",
+                    },
+                    ":codebuild:af-south-1:23456789111:report-group/",
+                    Object {
+                      "Ref": "PfmServiceDeploypreprodCodeBuildProject1F9A10DE",
+                    },
+                    "-*",
+                  ],
+                ],
+              },
+            },
+            Object {
+              "Action": Array [
+                "s3:GetObject*",
+                "s3:GetBucket*",
+                "s3:List*",
+                "s3:DeleteObject*",
+                "s3:PutObject",
+                "s3:Abort*",
+              ],
+              "Effect": "Allow",
+              "Resource": Array [
+                Object {
+                  "Fn::GetAtt": Array [
+                    "ArtifactsBucket2AAC5544",
+                    "Arn",
+                  ],
+                },
+                Object {
+                  "Fn::Join": Array [
+                    "",
+                    Array [
+                      Object {
+                        "Fn::GetAtt": Array [
+                          "ArtifactsBucket2AAC5544",
+                          "Arn",
+                        ],
+                      },
+                      "/*",
                     ],
                   ],
                 },
@@ -238,26 +650,334 @@ Object {
           ],
           "Version": "2012-10-17",
         },
-        "PolicyName": "PfmServiceCodeBuildEcsDeployProjectRoleDefaultPolicy23D57A21",
+        "PolicyName": "PREPRODPfmServiceEksDeployRolePolicyEAC8849E",
         "Roles": Array [
-          Object {
-            "Ref": "PfmServiceCodeBuildEcsDeployProjectRole648B05E0",
-          },
+          "eks-deploy",
         ],
       },
       "Type": "AWS::IAM::Policy",
     },
-    "PfmServiceCodeBuildProject660F0741": Object {
+    "PfmServiceDeploydevCodeBuildProjectC0D2A586": Object {
+      "DependsOn": Array [
+        "PfmServiceDeploydevCodeBuildProjectPolicyDocument51EAADC1",
+      ],
       "Properties": Object {
         "Artifacts": Object {
           "Type": "CODEPIPELINE",
         },
+        "Cache": Object {
+          "Type": "NO_CACHE",
+        },
         "EncryptionKey": "alias/aws/s3",
         "Environment": Object {
           "ComputeType": "BUILD_GENERAL1_SMALL",
-          "Image": "aws/codebuild/standard:5.0",
+          "Image": "aws/codebuild/standard:3.0",
           "ImagePullCredentialsType": "CODEBUILD",
-          "PrivilegedMode": false,
+          "PrivilegedMode": true,
+          "Type": "LINUX_CONTAINER",
+        },
+        "Name": Object {
+          "Fn::Join": Array [
+            "",
+            Array [
+              "pfm-service-",
+              Object {
+                "Ref": "branch",
+              },
+              "-deploy-dev",
+            ],
+          ],
+        },
+        "ServiceRole": "arn:aws:iam::23456789111:role/eks-deploy",
+        "Source": Object {
+          "BuildSpec": Object {
+            "Fn::Join": Array [
+              "",
+              Array [
+                "{
+  \\"version\\": \\"0.2\\",
+  \\"phases\\": {
+    \\"install\\": {
+      \\"commands\\": [
+        \\"echo \\\\\\"Installing Kubectl v1.15.0 in $PWD/bin\\\\\\"\\",
+        \\"mkdir -p bin\\",
+        \\"curl -L https://storage.googleapis.com/kubernetes-release/release/v1.15.0/bin/linux/amd64/kubectl -o bin/kubectl\\",
+        \\"chmod +x bin/kubectl\\",
+        \\"echo \\\\\\"Installing Yq v4.17.2 in $PWD/bin\\\\\\"\\",
+        \\"mkdir -p bin\\",
+        \\"curl -L https://github.com/mikefarah/yq/releases/download/v4.17.2/yq_linux_amd64 -o bin/yq\\",
+        \\"chmod +x bin/yq\\",
+        \\"chmod +x bin/yq --version\\"
+      ]
+    },
+    \\"build\\": {
+      \\"commands\\": [
+        \\"export VERSION=$(cat $CODEBUILD_SRC_DIR_Artifact_Build_Docker_Build/VERSION)\\",
+        \\"echo resolved version $VERSION\\",
+        \\"mkdir -p .k8s\\",
+        \\"aws s3 sync s3://momentum-money-k8s-templates .k8s/\\",
+        \\"aws eks update-kubeconfig --name non-prod --region af-south-1 --role-arn arn:aws:iam::23456789111:role/eks-deploy\\",
+        \\"bin/yq e -i '             .metadata.name = \\\\\\"pfm-service\\\\\\" |             .metadata.labels.project = \\\\\\"pfm-service\\\\\\" |             .metadata.labels.app = \\\\\\"pfm-service\\\\\\" |             .spec.replicas = ",
+                Object {
+                  "Ref": "replicas",
+                },
+                " |             .spec.selector.matchLabels[\\\\\\"app.kubernetes.io/instance\\\\\\"] = \\\\\\"pfm-service\\\\\\" |             .spec.template.metadata.labels[\\\\\\"app.kubernetes.io/name\\\\\\"] = \\\\\\"pfm-service\\\\\\" |             .spec.template.metadata.labels[\\\\\\"app.kubernetes.io/instance\\\\\\"] = \\\\\\"pfm-service\\\\\\" |             .spec.template.metadata.labels[\\\\\\"app.kubernetes.io/version\\\\\\"] = strenv(VERSION)+\\\\\\"-SNAPSHOT\\\\\\" |             .spec.template.spec.containers[0].name = \\\\\\"pfm-service\\\\\\" |             .spec.template.spec.containers[0].env.[0].value = \\\\\\"dev\\\\\\" |             .spec.template.spec.containers[0].readinessProbe.httpGet.path = \\\\\\"/pfm-service\\\\\\" |             .spec.template.spec.containers[0].livenessProbe.httpGet.path = \\\\\\"/pfm-service\\\\\\" |             .spec.template.spec.containers[0].image = \\\\\\"23456789111.dkr.ecr.eu-west-1.amazonaws.com/pfm-service:\\\\\\"+strenv(VERSION)+\\\\\\"-SNAPSHOT\\\\\\"             ' .k8s/deployment.yml\\",
+        \\"bin/yq e -i '             .metadata.name = \\\\\\"pfm-service-service\\\\\\" |             .metadata.labels.project = \\\\\\"pfm-service\\\\\\" |             .metadata.labels.app = \\\\\\"pfm-service\\\\\\" |             .metadata.labels.[\\\\\\"target-deployment\\\\\\"] = \\\\\\"pfm-service\\\\\\" |             .spec.selector[\\\\\\"app.kubernetes.io/instance\\\\\\"] = \\\\\\"pfm-service\\\\\\"             ' .k8s/svc-headless.yml\\",
+        \\"bin/yq e -i '             .metadata.name = \\\\\\"pfm-service-service-hl\\\\\\" |             .metadata.labels.project = \\\\\\"pfm-service\\\\\\" |             .metadata.labels.app = \\\\\\"pfm-service\\\\\\" |             .metadata.labels.[\\\\\\"target-deployment\\\\\\"] = \\\\\\"pfm-service\\\\\\" |             .spec.selector[\\\\\\"app.kubernetes.io/instance\\\\\\"] = \\\\\\"pfm-service\\\\\\"             ' .k8s/svc.yml\\",
+        \\"kubectl apply --namespace=dev -f .k8s/\\"
+      ]
+    }
+  },
+  \\"cache\\": {
+    \\"paths\\": [
+      \\"/root/.m2/**/*\\"
+    ]
+  },
+  \\"artifacts\\": {
+    \\"files\\": [
+      \\".k8s/*\\"
+    ]
+  }
+}",
+              ],
+            ],
+          },
+          "Type": "CODEPIPELINE",
+        },
+        "VpcConfig": Object {
+          "SecurityGroupIds": Array [
+            Object {
+              "Fn::GetAtt": Array [
+                "PfmServiceDeploydevCodeBuildProjectSecurityGroup9E791332",
+                "GroupId",
+              ],
+            },
+          ],
+          "Subnets": Array [
+            "p-12345",
+            "p-67890",
+          ],
+          "VpcId": "vpc-12345",
+        },
+      },
+      "Type": "AWS::CodeBuild::Project",
+    },
+    "PfmServiceDeploydevCodeBuildProjectPolicyDocument51EAADC1": Object {
+      "Properties": Object {
+        "PolicyDocument": Object {
+          "Statement": Array [
+            Object {
+              "Action": Array [
+                "ec2:CreateNetworkInterface",
+                "ec2:DescribeNetworkInterfaces",
+                "ec2:DeleteNetworkInterface",
+                "ec2:DescribeSubnets",
+                "ec2:DescribeSecurityGroups",
+                "ec2:DescribeDhcpOptions",
+                "ec2:DescribeVpcs",
+              ],
+              "Effect": "Allow",
+              "Resource": "*",
+            },
+          ],
+          "Version": "2012-10-17",
+        },
+        "PolicyName": "PfmServiceDeploydevCodeBuildProjectPolicyDocument51EAADC1",
+        "Roles": Array [
+          "eks-deploy",
+        ],
+      },
+      "Type": "AWS::IAM::Policy",
+    },
+    "PfmServiceDeploydevCodeBuildProjectSecurityGroup9E791332": Object {
+      "Properties": Object {
+        "GroupDescription": "Automatic generated security group for CodeBuild PfmServicePfmServiceDeploydevCodeBuildProjectFA1F8761",
+        "SecurityGroupEgress": Array [
+          Object {
+            "CidrIp": "0.0.0.0/0",
+            "Description": "Allow all outbound traffic by default",
+            "IpProtocol": "-1",
+          },
+        ],
+        "VpcId": "vpc-12345",
+      },
+      "Type": "AWS::EC2::SecurityGroup",
+    },
+    "PfmServiceDeploypreprodCodeBuildProject1F9A10DE": Object {
+      "DependsOn": Array [
+        "PfmServiceDeploypreprodCodeBuildProjectPolicyDocumentA85F5501",
+      ],
+      "Properties": Object {
+        "Artifacts": Object {
+          "Type": "CODEPIPELINE",
+        },
+        "Cache": Object {
+          "Type": "NO_CACHE",
+        },
+        "EncryptionKey": "alias/aws/s3",
+        "Environment": Object {
+          "ComputeType": "BUILD_GENERAL1_SMALL",
+          "Image": "aws/codebuild/standard:3.0",
+          "ImagePullCredentialsType": "CODEBUILD",
+          "PrivilegedMode": true,
+          "Type": "LINUX_CONTAINER",
+        },
+        "Name": Object {
+          "Fn::Join": Array [
+            "",
+            Array [
+              "pfm-service-",
+              Object {
+                "Ref": "branch",
+              },
+              "-deploy-preprod",
+            ],
+          ],
+        },
+        "ServiceRole": "arn:aws:iam::23456789111:role/eks-deploy",
+        "Source": Object {
+          "BuildSpec": Object {
+            "Fn::Join": Array [
+              "",
+              Array [
+                "{
+  \\"version\\": \\"0.2\\",
+  \\"phases\\": {
+    \\"install\\": {
+      \\"commands\\": [
+        \\"echo \\\\\\"Installing Kubectl v1.15.0 in $PWD/bin\\\\\\"\\",
+        \\"mkdir -p bin\\",
+        \\"curl -L https://storage.googleapis.com/kubernetes-release/release/v1.15.0/bin/linux/amd64/kubectl -o bin/kubectl\\",
+        \\"chmod +x bin/kubectl\\",
+        \\"echo \\\\\\"Installing Yq v4.17.2 in $PWD/bin\\\\\\"\\",
+        \\"mkdir -p bin\\",
+        \\"curl -L https://github.com/mikefarah/yq/releases/download/v4.17.2/yq_linux_amd64 -o bin/yq\\",
+        \\"chmod +x bin/yq\\",
+        \\"chmod +x bin/yq --version\\"
+      ]
+    },
+    \\"build\\": {
+      \\"commands\\": [
+        \\"export VERSION=$(cat $CODEBUILD_SRC_DIR_Artifact_Build_Docker_Build/VERSION)\\",
+        \\"echo resolved version $VERSION\\",
+        \\"mkdir -p .k8s\\",
+        \\"aws s3 sync s3://momentum-money-k8s-templates .k8s/\\",
+        \\"aws eks update-kubeconfig --name non-prod --region af-south-1 --role-arn arn:aws:iam::23456789111:role/eks-deploy\\",
+        \\"bin/yq e -i '             .metadata.name = \\\\\\"pfm-service\\\\\\" |             .metadata.labels.project = \\\\\\"pfm-service\\\\\\" |             .metadata.labels.app = \\\\\\"pfm-service\\\\\\" |             .spec.replicas = ",
+                Object {
+                  "Ref": "replicas",
+                },
+                " |             .spec.selector.matchLabels[\\\\\\"app.kubernetes.io/instance\\\\\\"] = \\\\\\"pfm-service\\\\\\" |             .spec.template.metadata.labels[\\\\\\"app.kubernetes.io/name\\\\\\"] = \\\\\\"pfm-service\\\\\\" |             .spec.template.metadata.labels[\\\\\\"app.kubernetes.io/instance\\\\\\"] = \\\\\\"pfm-service\\\\\\" |             .spec.template.metadata.labels[\\\\\\"app.kubernetes.io/version\\\\\\"] = strenv(VERSION) |             .spec.template.spec.containers[0].name = \\\\\\"pfm-service\\\\\\" |             .spec.template.spec.containers[0].env.[0].value = \\\\\\"preprod\\\\\\" |             .spec.template.spec.containers[0].readinessProbe.httpGet.path = \\\\\\"/pfm-service\\\\\\" |             .spec.template.spec.containers[0].livenessProbe.httpGet.path = \\\\\\"/pfm-service\\\\\\" |             .spec.template.spec.containers[0].image = \\\\\\"23456789111.dkr.ecr.eu-west-1.amazonaws.com/pfm-service:\\\\\\"+strenv(VERSION)             ' .k8s/deployment.yml\\",
+        \\"bin/yq e -i '             .metadata.name = \\\\\\"pfm-service-service\\\\\\" |             .metadata.labels.project = \\\\\\"pfm-service\\\\\\" |             .metadata.labels.app = \\\\\\"pfm-service\\\\\\" |             .metadata.labels.[\\\\\\"target-deployment\\\\\\"] = \\\\\\"pfm-service\\\\\\" |             .spec.selector[\\\\\\"app.kubernetes.io/instance\\\\\\"] = \\\\\\"pfm-service\\\\\\"             ' .k8s/svc-headless.yml\\",
+        \\"bin/yq e -i '             .metadata.name = \\\\\\"pfm-service-service-hl\\\\\\" |             .metadata.labels.project = \\\\\\"pfm-service\\\\\\" |             .metadata.labels.app = \\\\\\"pfm-service\\\\\\" |             .metadata.labels.[\\\\\\"target-deployment\\\\\\"] = \\\\\\"pfm-service\\\\\\" |             .spec.selector[\\\\\\"app.kubernetes.io/instance\\\\\\"] = \\\\\\"pfm-service\\\\\\"             ' .k8s/svc.yml\\",
+        \\"kubectl apply --namespace=preprod -f .k8s/\\"
+      ]
+    }
+  },
+  \\"cache\\": {
+    \\"paths\\": [
+      \\"/root/.m2/**/*\\"
+    ]
+  },
+  \\"artifacts\\": {
+    \\"files\\": [
+      \\".k8s/*\\"
+    ]
+  }
+}",
+              ],
+            ],
+          },
+          "Type": "CODEPIPELINE",
+        },
+        "VpcConfig": Object {
+          "SecurityGroupIds": Array [
+            Object {
+              "Fn::GetAtt": Array [
+                "PfmServiceDeploypreprodCodeBuildProjectSecurityGroup14223BB4",
+                "GroupId",
+              ],
+            },
+          ],
+          "Subnets": Array [
+            "p-12345",
+            "p-67890",
+          ],
+          "VpcId": "vpc-12345",
+        },
+      },
+      "Type": "AWS::CodeBuild::Project",
+    },
+    "PfmServiceDeploypreprodCodeBuildProjectPolicyDocumentA85F5501": Object {
+      "Properties": Object {
+        "PolicyDocument": Object {
+          "Statement": Array [
+            Object {
+              "Action": Array [
+                "ec2:CreateNetworkInterface",
+                "ec2:DescribeNetworkInterfaces",
+                "ec2:DeleteNetworkInterface",
+                "ec2:DescribeSubnets",
+                "ec2:DescribeSecurityGroups",
+                "ec2:DescribeDhcpOptions",
+                "ec2:DescribeVpcs",
+              ],
+              "Effect": "Allow",
+              "Resource": "*",
+            },
+          ],
+          "Version": "2012-10-17",
+        },
+        "PolicyName": "PfmServiceDeploypreprodCodeBuildProjectPolicyDocumentA85F5501",
+        "Roles": Array [
+          "eks-deploy",
+        ],
+      },
+      "Type": "AWS::IAM::Policy",
+    },
+    "PfmServiceDeploypreprodCodeBuildProjectSecurityGroup14223BB4": Object {
+      "Properties": Object {
+        "GroupDescription": "Automatic generated security group for CodeBuild PfmServicePfmServiceDeploypreprodCodeBuildProject8DEA7510",
+        "SecurityGroupEgress": Array [
+          Object {
+            "CidrIp": "0.0.0.0/0",
+            "Description": "Allow all outbound traffic by default",
+            "IpProtocol": "-1",
+          },
+        ],
+        "VpcId": "vpc-12345",
+      },
+      "Type": "AWS::EC2::SecurityGroup",
+    },
+    "PfmServiceEcrRepository23177656": Object {
+      "DeletionPolicy": "Delete",
+      "Properties": Object {
+        "ImageTagMutability": "IMMUTABLE",
+        "LifecyclePolicy": Object {
+          "LifecyclePolicyText": "{\\"rules\\":[{\\"rulePriority\\":1,\\"selection\\":{\\"tagStatus\\":\\"tagged\\",\\"tagPrefixList\\":[\\"SNAPSHOT\\"],\\"countType\\":\\"imageCountMoreThan\\",\\"countNumber\\":40},\\"action\\":{\\"type\\":\\"expire\\"}},{\\"rulePriority\\":2,\\"selection\\":{\\"tagStatus\\":\\"any\\",\\"countType\\":\\"imageCountMoreThan\\",\\"countNumber\\":9999},\\"action\\":{\\"type\\":\\"expire\\"}}]}",
+        },
+        "RepositoryName": "pfm-service",
+      },
+      "Type": "AWS::ECR::Repository",
+      "UpdateReplacePolicy": "Delete",
+    },
+    "PfmServiceMavenDockerCodeBuildProjectFBEEFCC2": Object {
+      "DependsOn": Array [
+        "PfmServiceMavenDockerCodeBuildProjectPolicyDocument63658B0B",
+      ],
+      "Properties": Object {
+        "Artifacts": Object {
+          "Type": "CODEPIPELINE",
+        },
+        "Cache": Object {
+          "Type": "NO_CACHE",
+        },
+        "EncryptionKey": "alias/aws/s3",
+        "Environment": Object {
+          "ComputeType": "BUILD_GENERAL1_SMALL",
+          "Image": "aws/codebuild/standard:3.0",
+          "ImagePullCredentialsType": "CODEBUILD",
+          "PrivilegedMode": true,
           "Type": "LINUX_CONTAINER",
         },
         "Name": Object {
@@ -274,7 +994,7 @@ Object {
         },
         "ServiceRole": Object {
           "Fn::GetAtt": Array [
-            "PfmServiceCodeBuildProjectRole4E78BE74",
+            "pfmserviceMavenDockerBuildRole12444B07",
             "Arn",
           ],
         },
@@ -287,69 +1007,230 @@ Object {
   \\"version\\": \\"0.2\\",
   \\"phases\\": {
     \\"install\\": {
-      \\"runtime_versions\\": {
-        \\"java\\": \\"corretto8\\"
+      \\"runtime-versions\\": {
+        \\"java\\": \\"openjdk8\\",
+        \\"docker\\": 18
       }
     },
     \\"build\\": {
       \\"commands\\": [
         \\"java -version\\",
         \\"mvn -version\\",
-        \\"mvn clean install\\",
-        \\"cp ",
+        \\"mkdir -p ~/.m2\\",
+        \\"export NEXUS_REPOSITORY=http://nexus-ces.mmih.biz\\",
+        \\"export NEXUS_USERNAME=$(aws ssm get-parameter --name \\\\\\"/mmi/nexus/username\\\\\\" --region af-south-1 --output json | jq -r '.[].Value')\\",
+        \\"export NEXUS_PASSWORD=$(aws ssm get-parameter --name \\\\\\"/mmi/nexus/password\\\\\\" --with-decryption --region af-south-1 --output json | jq -r '.[].Value')\\",
+        \\"echo \\\\\\" \\\\n<settings>\\\\n  <servers>\\\\n    <server>\\\\n      <id>nexus</id>\\\\n      <username>$NEXUS_USERNAME</username>\\\\n      <password>$NEXUS_PASSWORD</password>\\\\n    </server>\\\\n    <server>\\\\n      <id>momentum</id>\\\\n      <username>$NEXUS_USERNAME</username>\\\\n      <password>$NEXUS_PASSWORD</password>\\\\n    </server>\\\\n    <server>\\\\n      <id>nexus-momentum-central</id>\\\\n      <username>$NEXUS_USERNAME</username>\\\\n      <password>$NEXUS_PASSWORD</password>\\\\n    </server>\\\\n    <server>\\\\n      <id>nexus-momentum-thirdparty</id>\\\\n      <username>$NEXUS_USERNAME</username>\\\\n      <password>$NEXUS_PASSWORD</password>\\\\n    </server>\\\\n    <server>\\\\n      <id>nexus-momentum-releases</id>\\\\n      <username>$NEXUS_USERNAME</username>\\\\n      <password>$NEXUS_PASSWORD</password>\\\\n    </server>\\\\n    <server>\\\\n      <id>nexus-momentum-snapshots</id>\\\\n      <username>$NEXUS_USERNAME</username>\\\\n      <password>$NEXUS_PASSWORD</password>\\\\n    </server>\\\\n  </servers>\\\\n\\\\n  <profiles>\\\\n    <profile>\\\\n        <id>nexus</id>\\\\n        <repositories>\\\\n            <repository>\\\\n              <id>maven-public</id>\\\\n              <url>$NEXUS_REPOSITORY/repository/maven-public</url>\\\\n              <releases><enabled>true</enabled></releases>\\\\n              <snapshots><enabled>true</enabled></snapshots>\\\\n            </repository>\\\\n        </repositories>\\\\n        <pluginRepositories>\\\\n            <pluginRepository>\\\\n                <id>maven-public</id>\\\\n                <url>$NEXUS_REPOSITORY/repository/maven-public</url>\\\\n                <releases><enabled>true</enabled></releases>\\\\n                <snapshots><enabled>true</enabled></snapshots>\\\\n            </pluginRepository>\\\\n        </pluginRepositories>\\\\n    </profile>\\\\n  </profiles>\\\\n  <activeProfiles>\\\\n    <activeProfile>nexus</activeProfile>\\\\n  </activeProfiles>\\\\n</settings>\\\\n\\\\\\" > ~/.m2/settings.tmpl.xml\\",
+        \\"envsubst < ~/.m2/settings.tmpl.xml > ~/.m2/settings.xml\\",
+        \\"export ROLLBACK_VERSION=$(mvn org.apache.maven.plugins:maven-help-plugin:2.1.1:evaluate -Dexpression=project.version | sed -n -e '/^\\\\\\\\[.*\\\\\\\\]/ !{ /^[0-9]/ { p; q } }')\\",
+        \\"echo \\\\\\"Resolved current version $ROLLBACK_VERSION\\\\\\"\\",
+        \\"echo $ROLLBACK_VERSION > ROLLBACK_VERSION\\",
+        \\"mvn -f ",
                 Object {
-                  "Ref": "propertiesfile",
+                  "Ref": "pomFile",
                 },
-                " docker/files\\",
+                " build-helper:parse-version versions:set -DnewVersion='\${parsedVersion.majorVersion}.\${parsedVersion.nextMinorVersion}.'0 versions:commit\\",
+        \\"mvn clean install\\",
         \\"export VERSION=\`grep -oP 'version=\\\\\\\\K.*' ",
                 Object {
-                  "Ref": "propertiesfile",
+                  "Ref": "propertiesFile",
                 },
                 "\`\\",
+        \\"echo \\\\\\"Resolved new version $VERSION\\\\\\"\\",
         \\"echo $VERSION > VERSION\\",
-        \\"docker build -t ",
+        \\"cp ",
                 Object {
-                  "Ref": "AWS::AccountId",
+                  "Ref": "propertiesFile",
                 },
-                ".dkr.ecr.",
-                Object {
-                  "Ref": "AWS::Region",
-                },
-                ".amazonaws.com/pfm-service:$VERSION .\\",
-        \\"aws ecr get-login-password --region ",
-                Object {
-                  "Ref": "AWS::Region",
-                },
-                " | docker login --username AWS --password-stdin ",
-                Object {
-                  "Ref": "AWS::AccountId",
-                },
-                ".dkr.ecr.",
-                Object {
-                  "Ref": "AWS::Region",
-                },
-                ".amazonaws.com\\",
-        \\"docker push ",
-                Object {
-                  "Ref": "AWS::AccountId",
-                },
-                ".dkr.ecr.",
-                Object {
-                  "Ref": "AWS::Region",
-                },
-                ".amazonaws.com/pfm-service:$VERSION\\"
+                " docker/files\\",
+        \\"mvn deploy\\",
+        \\"aws ecr get-login-password --region eu-west-1 | docker login --username AWS --password-stdin 23456789111.dkr.ecr.eu-west-1.amazonaws.com\\",
+        \\"docker build -t 23456789111.dkr.ecr.eu-west-1.amazonaws.com/pfm-service:$VERSION-SNAPSHOT .\\",
+        \\"docker push 23456789111.dkr.ecr.eu-west-1.amazonaws.com/pfm-service:$VERSION-SNAPSHOT\\"
       ]
     }
   },
   \\"artifacts\\": {
     \\"files\\": [
       \\"VERSION\\",
+      \\"ROLLBACK_VERSION\\",
       \\"",
                 Object {
-                  "Ref": "propertiesfile",
+                  "Ref": "propertiesFile",
                 },
                 "\\"
     ]
+  },
+  \\"cache\\": {
+    \\"paths\\": [
+      \\"/root/.m2/**/*\\"
+    ]
+  }
+}",
+              ],
+            ],
+          },
+          "Type": "CODEPIPELINE",
+        },
+        "VpcConfig": Object {
+          "SecurityGroupIds": Array [
+            Object {
+              "Fn::GetAtt": Array [
+                "PfmServiceMavenDockerCodeBuildProjectSecurityGroup0AAAA536",
+                "GroupId",
+              ],
+            },
+          ],
+          "Subnets": Array [
+            "p-12345",
+            "p-67890",
+          ],
+          "VpcId": "vpc-12345",
+        },
+      },
+      "Type": "AWS::CodeBuild::Project",
+    },
+    "PfmServiceMavenDockerCodeBuildProjectPolicyDocument63658B0B": Object {
+      "Properties": Object {
+        "PolicyDocument": Object {
+          "Statement": Array [
+            Object {
+              "Action": Array [
+                "ec2:CreateNetworkInterface",
+                "ec2:DescribeNetworkInterfaces",
+                "ec2:DeleteNetworkInterface",
+                "ec2:DescribeSubnets",
+                "ec2:DescribeSecurityGroups",
+                "ec2:DescribeDhcpOptions",
+                "ec2:DescribeVpcs",
+              ],
+              "Effect": "Allow",
+              "Resource": "*",
+            },
+          ],
+          "Version": "2012-10-17",
+        },
+        "PolicyName": "PfmServiceMavenDockerCodeBuildProjectPolicyDocument63658B0B",
+        "Roles": Array [
+          Object {
+            "Ref": "pfmserviceMavenDockerBuildRole12444B07",
+          },
+        ],
+      },
+      "Type": "AWS::IAM::Policy",
+    },
+    "PfmServiceMavenDockerCodeBuildProjectSecurityGroup0AAAA536": Object {
+      "Properties": Object {
+        "GroupDescription": "Automatic generated security group for CodeBuild PfmServicePfmServiceMavenDockerCodeBuildProjectE3EC8B60",
+        "SecurityGroupEgress": Array [
+          Object {
+            "CidrIp": "0.0.0.0/0",
+            "Description": "Allow all outbound traffic by default",
+            "IpProtocol": "-1",
+          },
+        ],
+        "VpcId": "vpc-12345",
+      },
+      "Type": "AWS::EC2::SecurityGroup",
+    },
+    "PfmServiceMavenReleaseCodeBuildProjectF8C52ACA": Object {
+      "Properties": Object {
+        "Artifacts": Object {
+          "Type": "CODEPIPELINE",
+        },
+        "Cache": Object {
+          "Type": "NO_CACHE",
+        },
+        "EncryptionKey": "alias/aws/s3",
+        "Environment": Object {
+          "ComputeType": "BUILD_GENERAL1_SMALL",
+          "Image": "aws/codebuild/standard:3.0",
+          "ImagePullCredentialsType": "CODEBUILD",
+          "PrivilegedMode": true,
+          "Type": "LINUX_CONTAINER",
+        },
+        "Name": Object {
+          "Fn::Join": Array [
+            "",
+            Array [
+              "pfm-service-",
+              Object {
+                "Ref": "branch",
+              },
+              "-release",
+            ],
+          ],
+        },
+        "ServiceRole": Object {
+          "Fn::GetAtt": Array [
+            "PfmServiceMavenReleaseCodeBuildProjectRoleF47C81A2",
+            "Arn",
+          ],
+        },
+        "Source": Object {
+          "BuildSpec": Object {
+            "Fn::Join": Array [
+              "",
+              Array [
+                "{
+  \\"version\\": \\"0.2\\",
+  \\"env\\": {
+    \\"secrets-manager\\": {
+      \\"GITHUB_AUTH_TOKEN\\": \\"github-mmi-holdings-ces-token\\"
+    }
+  },
+  \\"phases\\": {
+    \\"install\\": {},
+    \\"build\\": {
+      \\"commands\\": [
+        \\"env\\",
+        \\"ls -al\\",
+        \\"git clone https://$GITHUB_AUTH_TOKEN@github.com/",
+                Object {
+                  "Ref": "githubOrg",
+                },
+                "/pfm-service.git .repo\\",
+        \\"cd .repo\\",
+        \\"git fetch --tags\\",
+        \\"git checkout ",
+                Object {
+                  "Ref": "branch",
+                },
+                "\\",
+        \\"git reset --hard \\\\\\"$CODEBUILD_RESOLVED_SOURCE_VERSION\\\\\\"\\",
+        \\"cd ..\\",
+        \\"mv .repo/.git .\\",
+        \\"rm -rf .repo\\",
+        \\"git status\\",
+        \\"export VERSION=$(cat $CODEBUILD_SRC_DIR_Artifact_Build_Docker_Build/VERSION)\\",
+        \\"echo resolved version $VERSION\\",
+        \\"mvn -f ",
+                Object {
+                  "Ref": "pomFile",
+                },
+                " build-helper:parse-version versions:set -DnewVersion=$VERSION versions:commit\\",
+        \\"git status\\",
+        \\"git config user.email \\\\\\"cesadmins@mmiholdings.co.za\\\\\\"\\",
+        \\"git config user.name \\\\\\"multiply-service\\\\\\"\\",
+        \\"git add *pom.xml **/pom.xml\\",
+        \\"git commit -m \\\\\\"Version update for Release v$VERSION\\\\\\"\\",
+        \\"git tag -a \\\\\\"$VERSION\\\\\\" -m \\\\\\"Publish tag for version v$VERSION\\\\\\"\\",
+        \\"git push https://$GITHUB_AUTH_TOKEN@github.com/",
+                Object {
+                  "Ref": "githubOrg",
+                },
+                "/pfm-service.git --all\\",
+        \\"git push https://$GITHUB_AUTH_TOKEN@github.com/",
+                Object {
+                  "Ref": "githubOrg",
+                },
+                "/pfm-service.git --tags\\",
+        \\"aws ecr get-login-password --region eu-west-1 | docker login --username AWS --password-stdin 23456789111.dkr.ecr.eu-west-1.amazonaws.com\\",
+        \\"docker pull 23456789111.dkr.ecr.eu-west-1.amazonaws.com/pfm-service:$VERSION-SNAPSHOT\\",
+        \\"docker tag 23456789111.dkr.ecr.eu-west-1.amazonaws.com/pfm-service:$VERSION-SNAPSHOT 23456789111.dkr.ecr.eu-west-1.amazonaws.com/pfm-service:$VERSION\\",
+        \\"docker push 23456789111.dkr.ecr.eu-west-1.amazonaws.com/pfm-service:$VERSION\\"
+      ]
+    }
   }
 }",
               ],
@@ -360,27 +1241,41 @@ Object {
       },
       "Type": "AWS::CodeBuild::Project",
     },
-    "PfmServiceCodeBuildProjectRole4E78BE74": Object {
-      "Properties": Object {
-        "AssumeRolePolicyDocument": Object {
-          "Statement": Array [
-            Object {
-              "Action": "sts:AssumeRole",
-              "Effect": "Allow",
-              "Principal": Object {
-                "Service": "codebuild.amazonaws.com",
-              },
-            },
-          ],
-          "Version": "2012-10-17",
-        },
-      },
-      "Type": "AWS::IAM::Role",
-    },
-    "PfmServiceCodeBuildProjectRoleDefaultPolicy27285B03": Object {
+    "PfmServiceMavenReleaseCodeBuildProjectRoleDefaultPolicy530E4B66": Object {
       "Properties": Object {
         "PolicyDocument": Object {
           "Statement": Array [
+            Object {
+              "Action": Array [
+                "ecr:GetAuthorizationToken",
+                "secretsmanager:ListSecrets",
+              ],
+              "Effect": "Allow",
+              "Resource": "*",
+            },
+            Object {
+              "Action": Array [
+                "secretsmanager:GetResourcePolicy",
+                "secretsmanager:GetSecretValue",
+                "secretsmanager:DescribeSecret",
+                "secretsmanager:ListSecretVersionIds",
+              ],
+              "Effect": "Allow",
+              "Resource": "arn:aws:secretsmanager:af-south-1:23456789111:secret:github-mmi-holdings-ces-token-*",
+            },
+            Object {
+              "Action": Array [
+                "ecr:BatchGetImage",
+                "ecr:BatchCheckLayerAvailability",
+                "ecr:CompleteLayerUpload",
+                "ecr:InitiateLayerUpload",
+                "ecr:GetDownloadUrlForLayer",
+                "ecr:PutImage",
+                "ecr:UploadLayerPart",
+              ],
+              "Effect": "Allow",
+              "Resource": "arn:aws:ecr:eu-west-1:23456789111:repository/pfm-service",
+            },
             Object {
               "Action": Array [
                 "logs:CreateLogGroup",
@@ -397,17 +1292,9 @@ Object {
                       Object {
                         "Ref": "AWS::Partition",
                       },
-                      ":logs:",
+                      ":logs:af-south-1:23456789111:log-group:/aws/codebuild/",
                       Object {
-                        "Ref": "AWS::Region",
-                      },
-                      ":",
-                      Object {
-                        "Ref": "AWS::AccountId",
-                      },
-                      ":log-group:/aws/codebuild/",
-                      Object {
-                        "Ref": "PfmServiceCodeBuildProject660F0741",
+                        "Ref": "PfmServiceMavenReleaseCodeBuildProjectF8C52ACA",
                       },
                     ],
                   ],
@@ -420,17 +1307,9 @@ Object {
                       Object {
                         "Ref": "AWS::Partition",
                       },
-                      ":logs:",
+                      ":logs:af-south-1:23456789111:log-group:/aws/codebuild/",
                       Object {
-                        "Ref": "AWS::Region",
-                      },
-                      ":",
-                      Object {
-                        "Ref": "AWS::AccountId",
-                      },
-                      ":log-group:/aws/codebuild/",
-                      Object {
-                        "Ref": "PfmServiceCodeBuildProject660F0741",
+                        "Ref": "PfmServiceMavenReleaseCodeBuildProjectF8C52ACA",
                       },
                       ":*",
                     ],
@@ -455,42 +1334,11 @@ Object {
                     Object {
                       "Ref": "AWS::Partition",
                     },
-                    ":codebuild:",
+                    ":codebuild:af-south-1:23456789111:report-group/",
                     Object {
-                      "Ref": "AWS::Region",
-                    },
-                    ":",
-                    Object {
-                      "Ref": "AWS::AccountId",
-                    },
-                    ":report-group/",
-                    Object {
-                      "Ref": "PfmServiceCodeBuildProject660F0741",
+                      "Ref": "PfmServiceMavenReleaseCodeBuildProjectF8C52ACA",
                     },
                     "-*",
-                  ],
-                ],
-              },
-            },
-            Object {
-              "Action": Array [
-                "ecr:BatchGetImage",
-                "ecr:BatchCheckLayerAvailability",
-                "ecr:GetDownloadUrlForLayer",
-              ],
-              "Effect": "Allow",
-              "Resource": Object {
-                "Fn::Join": Array [
-                  "",
-                  Array [
-                    Object {
-                      "Ref": "AWS::AccountId",
-                    },
-                    ".dkr.ecr.",
-                    Object {
-                      "Ref": "AWS::Region",
-                    },
-                    ".amazonaws.com/pfm-service",
                   ],
                 ],
               },
@@ -500,33 +1348,26 @@ Object {
                 "s3:GetObject*",
                 "s3:GetBucket*",
                 "s3:List*",
-                "s3:DeleteObject*",
-                "s3:PutObject*",
-                "s3:Abort*",
               ],
               "Effect": "Allow",
               "Resource": Array [
                 Object {
-                  "Fn::Join": Array [
-                    "",
-                    Array [
-                      "arn:",
-                      Object {
-                        "Ref": "AWS::Partition",
-                      },
-                      ":s3:::pipeline-artifacts",
-                    ],
+                  "Fn::GetAtt": Array [
+                    "ArtifactsBucket2AAC5544",
+                    "Arn",
                   ],
                 },
                 Object {
                   "Fn::Join": Array [
                     "",
                     Array [
-                      "arn:",
                       Object {
-                        "Ref": "AWS::Partition",
+                        "Fn::GetAtt": Array [
+                          "ArtifactsBucket2AAC5544",
+                          "Arn",
+                        ],
                       },
-                      ":s3:::pipeline-artifacts/*",
+                      "/*",
                     ],
                   ],
                 },
@@ -535,29 +1376,43 @@ Object {
           ],
           "Version": "2012-10-17",
         },
-        "PolicyName": "PfmServiceCodeBuildProjectRoleDefaultPolicy27285B03",
+        "PolicyName": "PfmServiceMavenReleaseCodeBuildProjectRoleDefaultPolicy530E4B66",
         "Roles": Array [
           Object {
-            "Ref": "PfmServiceCodeBuildProjectRole4E78BE74",
+            "Ref": "PfmServiceMavenReleaseCodeBuildProjectRoleF47C81A2",
           },
         ],
       },
       "Type": "AWS::IAM::Policy",
     },
-    "PfmServiceEcrRepository23177656": Object {
-      "DeletionPolicy": "Retain",
+    "PfmServiceMavenReleaseCodeBuildProjectRoleF47C81A2": Object {
       "Properties": Object {
-        "ImageScanningConfiguration": Object {
-          "ScanOnPush": true,
+        "AssumeRolePolicyDocument": Object {
+          "Statement": Array [
+            Object {
+              "Action": "sts:AssumeRole",
+              "Effect": "Allow",
+              "Principal": Object {
+                "Service": "codebuild.amazonaws.com",
+              },
+            },
+          ],
+          "Version": "2012-10-17",
         },
-        "ImageTagMutability": "IMMUTABLE",
-        "LifecyclePolicy": Object {
-          "LifecyclePolicyText": "{\\"rules\\":[{\\"rulePriority\\":1,\\"selection\\":{\\"tagStatus\\":\\"tagged\\",\\"tagPrefixList\\":[\\"SNAPSHOT\\"],\\"countType\\":\\"imageCountMoreThan\\",\\"countNumber\\":40},\\"action\\":{\\"type\\":\\"expire\\"}},{\\"rulePriority\\":2,\\"selection\\":{\\"tagStatus\\":\\"any\\",\\"countType\\":\\"imageCountMoreThan\\",\\"countNumber\\":9999},\\"action\\":{\\"type\\":\\"expire\\"}}]}",
+        "RoleName": Object {
+          "Fn::Join": Array [
+            "",
+            Array [
+              "pfm-service-",
+              Object {
+                "Ref": "branch",
+              },
+              "-release",
+            ],
+          ],
         },
-        "RepositoryName": "pfm-service",
       },
-      "Type": "AWS::ECR::Repository",
-      "UpdateReplacePolicy": "Retain",
+      "Type": "AWS::IAM::Role",
     },
     "PfmServicePipeline8BC7E9B0": Object {
       "DependsOn": Array [
@@ -566,7 +1421,9 @@ Object {
       ],
       "Properties": Object {
         "ArtifactStore": Object {
-          "Location": "pipeline-artifacts",
+          "Location": Object {
+            "Ref": "ArtifactsBucket2AAC5544",
+          },
           "Type": "S3",
         },
         "Name": Object {
@@ -597,10 +1454,12 @@ Object {
                   "Version": "1",
                 },
                 "Configuration": Object {
-                  "Branch": "master",
+                  "Branch": Object {
+                    "Ref": "branch",
+                  },
                   "OAuthToken": "{{resolve:secretsmanager:github-mmi-holdings-ces-token:SecretString:::}}",
                   "Owner": Object {
-                    "Ref": "githuborg",
+                    "Ref": "githubOrg",
                   },
                   "PollForSourceChanges": false,
                   "Repo": "pfm-service",
@@ -648,7 +1507,7 @@ Object {
                 },
                 "Configuration": Object {
                   "ProjectName": Object {
-                    "Ref": "PfmServiceCodeBuildProject660F0741",
+                    "Ref": "PfmServiceMavenDockerCodeBuildProjectFBEEFCC2",
                   },
                 },
                 "InputArtifacts": Array [
@@ -656,15 +1515,15 @@ Object {
                     "Name": "Artifact_Source_Github_Source",
                   },
                 ],
-                "Name": "Maven_Docker_Build",
+                "Name": "Docker_Build",
                 "OutputArtifacts": Array [
                   Object {
-                    "Name": "Artifact_Build_Maven_Docker_Build",
+                    "Name": "Artifact_Build_Docker_Build",
                   },
                 ],
                 "RoleArn": Object {
                   "Fn::GetAtt": Array [
-                    "PfmServicePipelineBuildMavenDockerBuildCodePipelineActionRole660E94A1",
+                    "PfmServicePipelineBuildDockerBuildCodePipelineActionRole01262C29",
                     "Arn",
                   ],
                 },
@@ -672,6 +1531,81 @@ Object {
               },
             ],
             "Name": "Build",
+          },
+          Object {
+            "Actions": Array [
+              Object {
+                "ActionTypeId": Object {
+                  "Category": "Build",
+                  "Owner": "AWS",
+                  "Provider": "CodeBuild",
+                  "Version": "1",
+                },
+                "Configuration": Object {
+                  "PrimarySource": "Artifact_Source_Github_Source",
+                  "ProjectName": Object {
+                    "Ref": "PfmServiceMavenReleaseCodeBuildProjectF8C52ACA",
+                  },
+                },
+                "InputArtifacts": Array [
+                  Object {
+                    "Name": "Artifact_Source_Github_Source",
+                  },
+                  Object {
+                    "Name": "Artifact_Build_Docker_Build",
+                  },
+                ],
+                "Name": "Version_Publish",
+                "RoleArn": Object {
+                  "Fn::GetAtt": Array [
+                    "PfmServicePipelinePublishVersionPublishCodePipelineActionRoleB4B9EA3A",
+                    "Arn",
+                  ],
+                },
+                "RunOrder": 1,
+              },
+            ],
+            "Name": "Publish",
+          },
+          Object {
+            "Actions": Array [
+              Object {
+                "ActionTypeId": Object {
+                  "Category": "Build",
+                  "Owner": "AWS",
+                  "Provider": "CodeBuild",
+                  "Version": "1",
+                },
+                "Configuration": Object {
+                  "PrimarySource": "Artifact_Source_Github_Source",
+                  "ProjectName": Object {
+                    "Ref": "PfmServiceDeploydevCodeBuildProjectC0D2A586",
+                  },
+                },
+                "InputArtifacts": Array [
+                  Object {
+                    "Name": "Artifact_Source_Github_Source",
+                  },
+                  Object {
+                    "Name": "Artifact_Build_Docker_Build",
+                  },
+                ],
+                "Name": "K8s_Deploy",
+                "OutputArtifacts": Array [
+                  Object {
+                    "Name": "Artifact_Deploy_Dev_K8s_Deploy",
+                  },
+                ],
+                "RoleArn": Object {
+                  "Fn::GetAtt": Array [
+                    "PfmServicePipelineDeployDevK8sDeployCodePipelineActionRole56F6E9E7",
+                    "Arn",
+                  ],
+                },
+                "RunOrder": 1,
+              },
+            ],
+            "Name": "Deploy_Dev",
           },
           Object {
             "Actions": Array [
@@ -685,14 +1619,14 @@ Object {
                 "Name": "Approve",
                 "RoleArn": Object {
                   "Fn::GetAtt": Array [
-                    "PfmServicePipelineApproveDeployApproveCodePipelineActionRoleE18751FB",
+                    "PfmServicePipelineApproveDeployPreApproveCodePipelineActionRole2F0EDFE7",
                     "Arn",
                   ],
                 },
                 "RunOrder": 1,
               },
             ],
-            "Name": "Approve_Deploy",
+            "Name": "Approve_Deploy_Pre",
           },
           Object {
             "Actions": Array [
@@ -704,26 +1638,35 @@ Object {
                   "Version": "1",
                 },
                 "Configuration": Object {
+                  "PrimarySource": "Artifact_Source_Github_Source",
                   "ProjectName": Object {
-                    "Ref": "PfmServiceCodeBuildEcsDeployProjectC6FDDE22",
+                    "Ref": "PfmServiceDeploypreprodCodeBuildProject1F9A10DE",
                   },
                 },
                 "InputArtifacts": Array [
                   Object {
-                    "Name": "Artifact_Build_Maven_Docker_Build",
+                    "Name": "Artifact_Source_Github_Source",
+                  },
+                  Object {
+                    "Name": "Artifact_Build_Docker_Build",
                   },
                 ],
-                "Name": "Ecs_Deploy",
+                "Name": "K8s_Deploy",
+                "OutputArtifacts": Array [
+                  Object {
+                    "Name": "Artifact_Deploy_PRE_K8s_Deploy",
+                  },
+                ],
                 "RoleArn": Object {
                   "Fn::GetAtt": Array [
-                    "PfmServicePipelineDeployEcsDeployCodePipelineActionRoleD714E0C9",
+                    "PfmServicePipelineDeployPREK8sDeployCodePipelineActionRole4067260F",
                     "Arn",
                   ],
                 },
                 "RunOrder": 1,
               },
             ],
-            "Name": "Deploy",
+            "Name": "Deploy_PRE",
           },
         ],
       },
@@ -745,11 +1688,7 @@ Object {
                       Object {
                         "Ref": "AWS::Partition",
                       },
-                      ":iam::",
-                      Object {
-                        "Ref": "AWS::AccountId",
-                      },
-                      ":root",
+                      ":iam::23456789111:root",
                     ],
                   ],
                 },
@@ -761,7 +1700,7 @@ Object {
       },
       "Type": "AWS::IAM::Role",
     },
-    "PfmServicePipelineApproveDeployApproveCodePipelineActionRoleE18751FB": Object {
+    "PfmServicePipelineApproveDeployPreApproveCodePipelineActionRole2F0EDFE7": Object {
       "Properties": Object {
         "AssumeRolePolicyDocument": Object {
           "Statement": Array [
@@ -777,11 +1716,7 @@ Object {
                       Object {
                         "Ref": "AWS::Partition",
                       },
-                      ":iam::",
-                      Object {
-                        "Ref": "AWS::AccountId",
-                      },
-                      ":root",
+                      ":iam::23456789111:root",
                     ],
                   ],
                 },
@@ -793,7 +1728,7 @@ Object {
       },
       "Type": "AWS::IAM::Role",
     },
-    "PfmServicePipelineBuildMavenDockerBuildCodePipelineActionRole660E94A1": Object {
+    "PfmServicePipelineBuildDockerBuildCodePipelineActionRole01262C29": Object {
       "Properties": Object {
         "AssumeRolePolicyDocument": Object {
           "Statement": Array [
@@ -809,11 +1744,7 @@ Object {
                       Object {
                         "Ref": "AWS::Partition",
                       },
-                      ":iam::",
-                      Object {
-                        "Ref": "AWS::AccountId",
-                      },
-                      ":root",
+                      ":iam::23456789111:root",
                     ],
                   ],
                 },
@@ -825,7 +1756,7 @@ Object {
       },
       "Type": "AWS::IAM::Role",
     },
-    "PfmServicePipelineBuildMavenDockerBuildCodePipelineActionRoleDefaultPolicy7D9B93B0": Object {
+    "PfmServicePipelineBuildDockerBuildCodePipelineActionRoleDefaultPolicy2DC8D55B": Object {
       "Properties": Object {
         "PolicyDocument": Object {
           "Statement": Array [
@@ -838,7 +1769,7 @@ Object {
               "Effect": "Allow",
               "Resource": Object {
                 "Fn::GetAtt": Array [
-                  "PfmServiceCodeBuildProject660F0741",
+                  "PfmServiceMavenDockerCodeBuildProjectFBEEFCC2",
                   "Arn",
                 ],
               },
@@ -846,16 +1777,16 @@ Object {
           ],
           "Version": "2012-10-17",
         },
-        "PolicyName": "PfmServicePipelineBuildMavenDockerBuildCodePipelineActionRoleDefaultPolicy7D9B93B0",
+        "PolicyName": "PfmServicePipelineBuildDockerBuildCodePipelineActionRoleDefaultPolicy2DC8D55B",
         "Roles": Array [
           Object {
-            "Ref": "PfmServicePipelineBuildMavenDockerBuildCodePipelineActionRole660E94A1",
+            "Ref": "PfmServicePipelineBuildDockerBuildCodePipelineActionRole01262C29",
           },
         ],
       },
       "Type": "AWS::IAM::Policy",
     },
-    "PfmServicePipelineDeployEcsDeployCodePipelineActionRoleD714E0C9": Object {
+    "PfmServicePipelineDeployDevK8sDeployCodePipelineActionRole56F6E9E7": Object {
       "Properties": Object {
         "AssumeRolePolicyDocument": Object {
           "Statement": Array [
@@ -871,11 +1802,7 @@ Object {
                       Object {
                         "Ref": "AWS::Partition",
                       },
-                      ":iam::",
-                      Object {
-                        "Ref": "AWS::AccountId",
-                      },
-                      ":root",
+                      ":iam::23456789111:root",
                     ],
                   ],
                 },
@@ -887,7 +1814,7 @@ Object {
       },
       "Type": "AWS::IAM::Role",
     },
-    "PfmServicePipelineDeployEcsDeployCodePipelineActionRoleDefaultPolicy8B3E5F71": Object {
+    "PfmServicePipelineDeployDevK8sDeployCodePipelineActionRoleDefaultPolicy58D4F475": Object {
       "Properties": Object {
         "PolicyDocument": Object {
           "Statement": Array [
@@ -900,7 +1827,7 @@ Object {
               "Effect": "Allow",
               "Resource": Object {
                 "Fn::GetAtt": Array [
-                  "PfmServiceCodeBuildEcsDeployProjectC6FDDE22",
+                  "PfmServiceDeploydevCodeBuildProjectC0D2A586",
                   "Arn",
                 ],
               },
@@ -908,10 +1835,126 @@ Object {
           ],
           "Version": "2012-10-17",
         },
-        "PolicyName": "PfmServicePipelineDeployEcsDeployCodePipelineActionRoleDefaultPolicy8B3E5F71",
+        "PolicyName": "PfmServicePipelineDeployDevK8sDeployCodePipelineActionRoleDefaultPolicy58D4F475",
         "Roles": Array [
           Object {
-            "Ref": "PfmServicePipelineDeployEcsDeployCodePipelineActionRoleD714E0C9",
+            "Ref": "PfmServicePipelineDeployDevK8sDeployCodePipelineActionRole56F6E9E7",
+          },
+        ],
+      },
+      "Type": "AWS::IAM::Policy",
+    },
+    "PfmServicePipelineDeployPREK8sDeployCodePipelineActionRole4067260F": Object {
+      "Properties": Object {
+        "AssumeRolePolicyDocument": Object {
+          "Statement": Array [
+            Object {
+              "Action": "sts:AssumeRole",
+              "Effect": "Allow",
+              "Principal": Object {
+                "AWS": Object {
+                  "Fn::Join": Array [
+                    "",
+                    Array [
+                      "arn:",
+                      Object {
+                        "Ref": "AWS::Partition",
+                      },
+                      ":iam::23456789111:root",
+                    ],
+                  ],
+                },
+              },
+            },
+          ],
+          "Version": "2012-10-17",
+        },
+      },
+      "Type": "AWS::IAM::Role",
+    },
+    "PfmServicePipelineDeployPREK8sDeployCodePipelineActionRoleDefaultPolicy9B05A80E": Object {
+      "Properties": Object {
+        "PolicyDocument": Object {
+          "Statement": Array [
+            Object {
+              "Action": Array [
+                "codebuild:BatchGetBuilds",
+                "codebuild:StartBuild",
+                "codebuild:StopBuild",
+              ],
+              "Effect": "Allow",
+              "Resource": Object {
+                "Fn::GetAtt": Array [
+                  "PfmServiceDeploypreprodCodeBuildProject1F9A10DE",
+                  "Arn",
+                ],
+              },
+            },
+          ],
+          "Version": "2012-10-17",
+        },
+        "PolicyName": "PfmServicePipelineDeployPREK8sDeployCodePipelineActionRoleDefaultPolicy9B05A80E",
+        "Roles": Array [
+          Object {
+            "Ref": "PfmServicePipelineDeployPREK8sDeployCodePipelineActionRole4067260F",
+          },
+        ],
+      },
+      "Type": "AWS::IAM::Policy",
+    },
+    "PfmServicePipelinePublishVersionPublishCodePipelineActionRoleB4B9EA3A": Object {
+      "Properties": Object {
+        "AssumeRolePolicyDocument": Object {
+          "Statement": Array [
+            Object {
+              "Action": "sts:AssumeRole",
+              "Effect": "Allow",
+              "Principal": Object {
+                "AWS": Object {
+                  "Fn::Join": Array [
+                    "",
+                    Array [
+                      "arn:",
+                      Object {
+                        "Ref": "AWS::Partition",
+                      },
+                      ":iam::23456789111:root",
+                    ],
+                  ],
+                },
+              },
+            },
+          ],
+          "Version": "2012-10-17",
+        },
+      },
+      "Type": "AWS::IAM::Role",
+    },
+    "PfmServicePipelinePublishVersionPublishCodePipelineActionRoleDefaultPolicy2C38F186": Object {
+      "Properties": Object {
+        "PolicyDocument": Object {
+          "Statement": Array [
+            Object {
+              "Action": Array [
+                "codebuild:BatchGetBuilds",
+                "codebuild:StartBuild",
+                "codebuild:StopBuild",
+              ],
+              "Effect": "Allow",
+              "Resource": Object {
+                "Fn::GetAtt": Array [
+                  "PfmServiceMavenReleaseCodeBuildProjectF8C52ACA",
+                  "Arn",
+                ],
+              },
+            },
+          ],
+          "Version": "2012-10-17",
+        },
+        "PolicyName": "PfmServicePipelinePublishVersionPublishCodePipelineActionRoleDefaultPolicy2C38F186",
+        "Roles": Array [
+          Object {
+            "Ref": "PfmServicePipelinePublishVersionPublishCodePipelineActionRoleB4B9EA3A",
           },
         ],
       },
@@ -927,32 +1970,28 @@ Object {
                 "s3:GetBucket*",
                 "s3:List*",
                 "s3:DeleteObject*",
-                "s3:PutObject*",
+                "s3:PutObject",
                 "s3:Abort*",
               ],
               "Effect": "Allow",
               "Resource": Array [
                 Object {
-                  "Fn::Join": Array [
-                    "",
-                    Array [
-                      "arn:",
-                      Object {
-                        "Ref": "AWS::Partition",
-                      },
-                      ":s3:::pipeline-artifacts",
-                    ],
+                  "Fn::GetAtt": Array [
+                    "ArtifactsBucket2AAC5544",
+                    "Arn",
                   ],
                 },
                 Object {
                   "Fn::Join": Array [
                     "",
                     Array [
-                      "arn:",
                       Object {
-                        "Ref": "AWS::Partition",
+                        "Fn::GetAtt": Array [
+                          "ArtifactsBucket2AAC5544",
+                          "Arn",
+                        ],
                       },
-                      ":s3:::pipeline-artifacts/*",
+                      "/*",
                     ],
                   ],
                 },
@@ -973,7 +2012,7 @@ Object {
               "Effect": "Allow",
               "Resource": Object {
                 "Fn::GetAtt": Array [
-                  "PfmServicePipelineBuildMavenDockerBuildCodePipelineActionRole660E94A1",
+                  "PfmServicePipelineBuildDockerBuildCodePipelineActionRole01262C29",
                   "Arn",
                 ],
               },
@@ -983,7 +2022,7 @@ Object {
               "Effect": "Allow",
               "Resource": Object {
                 "Fn::GetAtt": Array [
-                  "PfmServicePipelineApproveDeployApproveCodePipelineActionRoleE18751FB",
+                  "PfmServicePipelinePublishVersionPublishCodePipelineActionRoleB4B9EA3A",
                   "Arn",
                 ],
               },
@@ -993,7 +2032,27 @@ Object {
               "Effect": "Allow",
               "Resource": Object {
                 "Fn::GetAtt": Array [
-                  "PfmServicePipelineDeployEcsDeployCodePipelineActionRoleD714E0C9",
+                  "PfmServicePipelineDeployDevK8sDeployCodePipelineActionRole56F6E9E7",
+                  "Arn",
+                ],
+              },
+            },
+            Object {
+              "Action": "sts:AssumeRole",
+              "Effect": "Allow",
+              "Resource": Object {
+                "Fn::GetAtt": Array [
+                  "PfmServicePipelineApproveDeployPreApproveCodePipelineActionRole2F0EDFE7",
+                  "Arn",
+                ],
+              },
+            },
+            Object {
+              "Action": "sts:AssumeRole",
+              "Effect": "Allow",
+              "Resource": Object {
+                "Fn::GetAtt": Array [
+                  "PfmServicePipelineDeployPREK8sDeployCodePipelineActionRole4067260F",
                   "Arn",
                 ],
               },
@@ -1047,6 +2106,270 @@ Object {
         "TargetPipelineVersion": 1,
       },
       "Type": "AWS::CodePipeline::Webhook",
+    },
+    "pfmserviceMavenDockerBuildRole12444B07": Object {
+      "Properties": Object {
+        "AssumeRolePolicyDocument": Object {
+          "Statement": Array [
+            Object {
+              "Action": "sts:AssumeRole",
+              "Effect": "Allow",
+              "Principal": Object {
+                "Service": "codebuild.amazonaws.com",
+              },
+            },
+          ],
+          "Version": "2012-10-17",
+        },
+      },
+      "Type": "AWS::IAM::Role",
+    },
+    "pfmserviceMavenDockerBuildRoleDefaultPolicy6010124D": Object {
+      "Properties": Object {
+        "PolicyDocument": Object {
+          "Statement": Array [
+            Object {
+              "Action": Array [
+                "ecr:BatchGetImage",
+                "ecr:BatchCheckLayerAvailability",
+                "ecr:CompleteLayerUpload",
+                "ecr:InitiateLayerUpload",
+                "ecr:GetDownloadUrlForLayer",
+                "ecr:PutImage",
+                "ecr:UploadLayerPart",
+              ],
+              "Effect": "Allow",
+              "Resource": "arn:aws:ecr:eu-west-1:23456789111:repository/pfm-service",
+            },
+            Object {
+              "Action": "ecr:GetAuthorizationToken",
+              "Effect": "Allow",
+              "Resource": "*",
+            },
+            Object {
+              "Action": Array [
+                "kms:Decrypt",
+                "ssm:GetParameter",
+                "ssm:GetParameters",
+                "ssm:GetParametersByPath",
+                "ssm:GetParameterHistory",
+              ],
+              "Effect": "Allow",
+              "Resource": Array [
+                "arn:aws:ssm:af-south-1:23456789111:parameter/mmi/nexus/username",
+                "arn:aws:ssm:af-south-1:23456789111:parameter/mmi/nexus/password",
+                "arn:aws:kms:af-south-1:23456789111:key/*",
+              ],
+            },
+            Object {
+              "Action": "ec2:CreateNetworkInterfacePermission",
+              "Condition": Object {
+                "StringEquals": Object {
+                  "ec2:AuthorizedService": "codebuild.amazonaws.com",
+                  "ec2:Subnet": Array [
+                    Object {
+                      "Fn::Join": Array [
+                        "",
+                        Array [
+                          "arn:",
+                          Object {
+                            "Ref": "AWS::Partition",
+                          },
+                          ":ec2:",
+                          Object {
+                            "Ref": "AWS::Region",
+                          },
+                          ":",
+                          Object {
+                            "Ref": "AWS::AccountId",
+                          },
+                          ":subnet/p-12345",
+                        ],
+                      ],
+                    },
+                    Object {
+                      "Fn::Join": Array [
+                        "",
+                        Array [
+                          "arn:",
+                          Object {
+                            "Ref": "AWS::Partition",
+                          },
+                          ":ec2:",
+                          Object {
+                            "Ref": "AWS::Region",
+                          },
+                          ":",
+                          Object {
+                            "Ref": "AWS::AccountId",
+                          },
+                          ":subnet/p-67890",
+                        ],
+                      ],
+                    },
+                  ],
+                },
+              },
+              "Effect": "Allow",
+              "Resource": Object {
+                "Fn::Join": Array [
+                  "",
+                  Array [
+                    "arn:",
+                    Object {
+                      "Ref": "AWS::Partition",
+                    },
+                    ":ec2:",
+                    Object {
+                      "Ref": "AWS::Region",
+                    },
+                    ":",
+                    Object {
+                      "Ref": "AWS::AccountId",
+                    },
+                    ":network-interface/*",
+                  ],
+                ],
+              },
+            },
+            Object {
+              "Action": Array [
+                "logs:CreateLogGroup",
+                "logs:CreateLogStream",
+                "logs:PutLogEvents",
+              ],
+              "Effect": "Allow",
+              "Resource": Array [
+                Object {
+                  "Fn::Join": Array [
+                    "",
+                    Array [
+                      "arn:",
+                      Object {
+                        "Ref": "AWS::Partition",
+                      },
+                      ":logs:af-south-1:23456789111:log-group:/aws/codebuild/",
+                      Object {
+                        "Ref": "PfmServiceMavenDockerCodeBuildProjectFBEEFCC2",
+                      },
+                    ],
+                  ],
+                },
+                Object {
+                  "Fn::Join": Array [
+                    "",
+                    Array [
+                      "arn:",
+                      Object {
+                        "Ref": "AWS::Partition",
+                      },
+                      ":logs:af-south-1:23456789111:log-group:/aws/codebuild/",
+                      Object {
+                        "Ref": "PfmServiceMavenDockerCodeBuildProjectFBEEFCC2",
+                      },
+                      ":*",
+                    ],
+                  ],
+                },
+              ],
+            },
+            Object {
+              "Action": Array [
+                "codebuild:CreateReportGroup",
+                "codebuild:CreateReport",
+                "codebuild:UpdateReport",
+                "codebuild:BatchPutTestCases",
+                "codebuild:BatchPutCodeCoverages",
+              ],
+              "Effect": "Allow",
+              "Resource": Object {
+                "Fn::Join": Array [
+                  "",
+                  Array [
+                    "arn:",
+                    Object {
+                      "Ref": "AWS::Partition",
+                    },
+                    ":codebuild:af-south-1:23456789111:report-group/",
+                    Object {
+                      "Ref": "PfmServiceMavenDockerCodeBuildProjectFBEEFCC2",
+                    },
+                    "-*",
+                  ],
+                ],
+              },
+            },
+            Object {
+              "Action": Array [
+                "s3:GetObject*",
+                "s3:GetBucket*",
+                "s3:List*",
+                "s3:DeleteObject*",
+                "s3:PutObject",
+                "s3:Abort*",
+              ],
+              "Effect": "Allow",
+              "Resource": Array [
+                Object {
+                  "Fn::GetAtt": Array [
+                    "ArtifactsBucket2AAC5544",
+                    "Arn",
+                  ],
+                },
+                Object {
+                  "Fn::Join": Array [
+                    "",
+                    Array [
+                      Object {
+                        "Fn::GetAtt": Array [
+                          "ArtifactsBucket2AAC5544",
+                          "Arn",
+                        ],
+                      },
+                      "/*",
+                    ],
+                  ],
+                },
+              ],
+            },
+          ],
+          "Version": "2012-10-17",
+        },
+        "PolicyName": "pfmserviceMavenDockerBuildRoleDefaultPolicy6010124D",
+        "Roles": Array [
+          Object {
+            "Ref": "pfmserviceMavenDockerBuildRole12444B07",
+          },
+        ],
+      },
+      "Type": "AWS::IAM::Policy",
+    },
+  },
+  "Rules": Object {
+    "CheckBootstrapVersion": Object {
+      "Assertions": Array [
+        Object {
+          "Assert": Object {
+            "Fn::Not": Array [
+              Object {
+                "Fn::Contains": Array [
+                  Array [
+                    "1",
+                    "2",
+                    "3",
+                    "4",
+                    "5",
+                  ],
+                  Object {
+                    "Ref": "BootstrapVersion",
+                  },
+                ],
+              },
+            ],
+          },
+          "AssertDescription": "CDK bootstrap stack version 6 required. Please run 'cdk bootstrap' with a recent version of the CDK CLI.",
+        },
+      ],
     },
   },
 }

@@ -1,5 +1,3 @@
-import { CfnParameter } from "@aws-cdk/core";
-
 export const toValidConstructName = (id: string) => {
   let str = id.split('_').join('-');
 

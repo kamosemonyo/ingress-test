@@ -1,7 +1,7 @@
-import { Construct } from '@aws-cdk/core';
-import { CodeBuildAction } from "@aws-cdk/aws-codepipeline-actions";
-import { BuildSpec, PipelineProject } from '@aws-cdk/aws-codebuild';
-import { Artifact } from '@aws-cdk/aws-codepipeline';
+import { Construct } from "constructs";
+import { CodeBuildAction } from "aws-cdk-lib/aws-codepipeline-actions";
+import { BuildSpec, PipelineProject } from 'aws-cdk-lib/aws-codebuild';
+import { Artifact } from 'aws-cdk-lib/aws-codepipeline';
 import { toValidConstructName } from '../lib/util';
 
 interface parameters {
@@ -11,7 +11,7 @@ interface parameters {
   inputArtifact: Artifact
 };
 
-export const getCodeBuildAction = (scope: Construct, params: parameters): CodeBuildAction => {
+const getCodeBuildAction = (scope: Construct, params: parameters): CodeBuildAction => {
   const buildAction = new CodeBuildAction({
     actionName: 'CodeBuild',
     input: params.inputArtifact,

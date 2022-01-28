@@ -1,26 +1,39 @@
-import { SynthUtils } from '@aws-cdk/assert';
-import * as cdk from '@aws-cdk/core';
+import { Template } from '@aws-cdk/assertions-alpha';
+import { App } from 'aws-cdk-lib';
 
 import { MavenServicePipeline } from '../templates/maven-service-pipeline';
 
 import '@aws-cdk/assert/jest';
+
 import { toValidConstructName } from '../lib/util';
 
 const repositoryName = 'pfm-service';
 const artifactsBucket = 'pipeline-artifacts';
 
 test('Stack Snapshot', () => {
-  const app = new cdk.App({ context: { repositoryName }});
-  const stack = new MavenServicePipeline(app, toValidConstructName(repositoryName), {});
+  const app = new App({ context: { repositoryName }});
+  const stack = new MavenServicePipeline(app, toValidConstructName(repositoryName), {
+    repositoryName,
+    env: {
+      account: '23456789111',
+      region: 'af-south-1'
+    }
+  });
   app.synth();
 
-  expect(SynthUtils.toCloudFormation(stack)).toMatchSnapshot();
+  expect(Template.fromStack(stack)).toMatchSnapshot();
 });
 
 test('Throw error without repository context', () => {
   const synth = () => {
-    const app = new cdk.App();
-    const stack = new MavenServicePipeline(app, toValidConstructName(repositoryName), {});
+    const app = new App();
+    const stack = new MavenServicePipeline(app, toValidConstructName(repositoryName), {
+      repositoryName,
+      env: {
+        account: '23456789111',
+        region: 'af-south-1'
+      }
+    });
     app.synth();
   };
 
@@ -28,12 +41,18 @@ test('Throw error without repository context', () => {
 });
 
 test('Creates all required resources', () => {
-  const app = new cdk.App({ context: { repositoryName }});
-  const stack = new MavenServicePipeline(app, toValidConstructName(repositoryName), {});
+  const app = new App({ context: { repositoryName }});
+  const stack = new MavenServicePipeline(app, toValidConstructName(repositoryName), {
+    repositoryName,
+    env: {
+      account: '23456789111',
+      region: 'af-south-1'
+    },
+  });
   app.synth();
 
   // Creates Pipeline
-  expect(stack).toHaveResource('AWS::CodePipeline::Pipeline', {
+  Template.fromStack(stack).hasResourceProperties('AWS::CodePipeline::Pipeline', {
     Name: {
       'Fn::Join': [
         '',
@@ -52,7 +71,7 @@ test('Creates all required resources', () => {
   });
 
   // Creates build CodeBuild project
-  expect(stack).toHaveResource('AWS::CodeBuild::Project', {
+  Template.fromStack(stack).hasResourceProperties('AWS::CodeBuild::Project', {
     Name: {
       'Fn::Join': [
         '',
@@ -68,7 +87,7 @@ test('Creates all required resources', () => {
   });
 
   // Creates deploy CodeBuild project
-  expect(stack).toHaveResource('AWS::CodeBuild::Project', {
+  Template.fromStack(stack).hasResourceProperties('AWS::CodeBuild::Project', {
     Name: {
       'Fn::Join': [
         '',
@@ -84,7 +103,7 @@ test('Creates all required resources', () => {
   });
 
   // Creates ECR repository
-  expect(stack).toHaveResource('AWS::ECR::Repository', {
+  Template.fromStack(stack).hasResourceProperties('AWS::ECR::Repository', {
     RepositoryName: repositoryName,
     ImageTagMutability: 'IMMUTABLE'
   });
@@ -93,12 +112,18 @@ test('Creates all required resources', () => {
 test('Builds pipeline correctly', () => {
   process.env.SOURCE_BRANCH = 'develop';
 
-  const app = new cdk.App({ context: { repositoryName }});
-  const stack = new MavenServicePipeline(app, toValidConstructName(repositoryName), {});
+  const app = new App({ context: { repositoryName }});
+  const stack = new MavenServicePipeline(app, toValidConstructName(repositoryName), {
+    repositoryName,
+    env: {
+      account: '23456789111',
+      region: 'af-south-1'
+    }
+  });
 
   app.synth();
 
-  expect(stack).toHaveResourceLike('AWS::CodePipeline::Pipeline', {
+  Template.fromStack(stack).hasResourceProperties('AWS::CodePipeline::Pipeline', {
     Name: {
       'Fn::Join': [
         '',

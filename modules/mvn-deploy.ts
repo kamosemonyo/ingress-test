@@ -1,11 +1,11 @@
-import { Construct } from '@aws-cdk/core';
-import { Effect, PolicyStatement } from '@aws-cdk/aws-iam';
-import { CodeBuildAction } from "@aws-cdk/aws-codepipeline-actions";
-import { BuildSpec, PipelineProject } from '@aws-cdk/aws-codebuild';
-import { Artifact } from '@aws-cdk/aws-codepipeline';
+import { Construct } from 'constructs';
+import { Effect, PolicyStatement } from 'aws-cdk-lib/aws-iam';
+import { CodeBuildAction } from "aws-cdk-lib/aws-codepipeline-actions";
+import { BuildSpec, PipelineProject } from 'aws-cdk-lib/aws-codebuild';
+import { Artifact } from 'aws-cdk-lib/aws-codepipeline';
 import { toValidConstructName } from '../lib/util';
 import { codeBuildSpecVersion, defaultCodeBuildEnvironment, mainGitBranch, nexusRepository } from '../lib/constants';
-import { IVpc } from '@aws-cdk/aws-ec2';
+import { IVpc } from 'aws-cdk-lib/aws-ec2';
 import { CommonCommands } from '../lib/commands';
 
 interface parameters {
@@ -20,7 +20,7 @@ interface parameters {
   vpc?: IVpc,
 };
 
-export const createMavenDeployAction = (scope: Construct, params: parameters): CodeBuildAction => {
+const createMavenDeployAction = (scope: Construct, params: parameters): CodeBuildAction => {
   const buildAction = new CodeBuildAction({
     actionName: 'Maven_Deploy',
     input: params.inputArtifact,
@@ -33,7 +33,7 @@ export const createMavenDeployAction = (scope: Construct, params: parameters): C
 
 const createMavenDeployProject = (scope: Construct, params: parameters): PipelineProject => {
   const buildProject = new PipelineProject(scope, `${toValidConstructName(params.repositoryName)}CodeBuildProject`, {
-    projectName: `${params.repositoryName}-${params.branch}-build`,
+    projectName: `${params.repositoryName}-${params.branch}-deploy`,
     buildSpec: buildMavenDeploySpec(params),
     environment: defaultCodeBuildEnvironment,
     vpc: params.vpc,
