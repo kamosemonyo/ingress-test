@@ -1,10 +1,10 @@
 export class Service {
-  name:String;
+  name:string;
   replicas:Number;
-  propertiesFilePath:String;
-  branches:String[];
+  propertiesFilePath:string;
+  branches:string[];
 
-  constructor(name:String, replicas:Number, propertiesFilePath:String, branches:String[]) {
+  constructor(name:string, replicas:Number, propertiesFilePath:string, branches:string[]) {
     this.name = name;
     this.replicas = replicas;
     this.propertiesFilePath = propertiesFilePath;
@@ -14,7 +14,7 @@ export class Service {
 
 export class JavaService extends Service {
 
-  constructor(name:String, replicas:Number, propertiesFilePath:String, branches:String[]) {
+  constructor(name:string, replicas:Number, propertiesFilePath:string, branches:string[]) {
     super(name, replicas, propertiesFilePath, branches);
   }
 }

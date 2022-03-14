@@ -1,12 +1,26 @@
 import { readFileSync, PathLike } from 'fs';
 import { load } from 'js-yaml';
+import { JavaService, Service } from './service';
 
 export class ServiceBuilder {
   private static filepath:PathLike = './misc/projects.yml';
 
-  static buildJavaServices () {
+  static buildJavaServices ():Service[] {
     const config:any = this.readConfig()
-    return config.services;
+    const services:Service[] = [];
+
+    for (const service of config.services) {
+      const jService = new JavaService(
+        service.name,
+        service.replicas,
+        service.propertiesFilePath,
+        service.branches
+      );
+      
+      services.push(jService);
+    }
+
+    return services;
   }
 
   static readConfig () {

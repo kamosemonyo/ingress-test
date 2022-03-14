@@ -1,29 +1,12 @@
 import { Construct } from "constructs";
-import { StackProps } from "aws-cdk-lib/core";
-import { IRepository } from 'aws-cdk-lib/aws-ecr';
-import * as ecs from 'aws-cdk-lib/aws-ecs';
 
 import { toValidConstructName } from '../lib/util';
-import { environmentConfig } from "../lib/config";
 import { BuildSpec, PipelineProject } from "aws-cdk-lib/aws-codebuild";
 import { codeBuildSpecVersion, defaultCodeBuildEnvironment } from "../lib/constants";
 import { CodeBuildAction } from "aws-cdk-lib/aws-codepipeline-actions";
 import { Artifact } from "aws-cdk-lib/aws-codepipeline";
 import { CommonCommands } from "../lib/commands";
 
-interface parameters extends StackProps {
-  project: string
-  hasLoadbalancer?: boolean,
-  ephemeralStorageGiB?: number
-  cluster: ecs.ICluster
-  cpu?: string
-  mem?: string
-  version?: string
-  taskCount?: number
-  ecrRepository: IRepository
-  environmentConfig: environmentConfig
-  excludeVolumes?: boolean
-}
 
 const defaultCPU: number = 256;
 const defaultMEM: number = 512;

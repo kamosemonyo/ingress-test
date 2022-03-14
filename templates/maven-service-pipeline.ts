@@ -2,7 +2,6 @@ import { Construct  } from "constructs";
 import { CfnParameter, RemovalPolicy, Stack, StackProps } from "aws-cdk-lib";
 import { aws_s3 as s3 } from 'aws-cdk-lib';
 import { aws_codepipeline as codepipeline } from "aws-cdk-lib";
-import { aws_codepipeline_actions as pipeline_actions } from "aws-cdk-lib";
 import { aws_ec2 as ec2 } from "aws-cdk-lib";
 
 import { createEcrRepository } from "../modules/ecr-repository";
@@ -106,15 +105,6 @@ export class MavenServicePipeline extends Stack {
       ]
     });
 
-    pipelineStages.push({
-      stageName: 'Approve_Build',
-      actions: [
-        new pipeline_actions.ManualApprovalAction({
-          actionName: 'Approve',
-        }),
-      ],
-    });
-
     const vpc = ec2.Vpc.fromLookup(this, 'CodeBuildVpc', {
       vpcName: CODE_BUILD_VPC_NAME,
       isDefault: false,
@@ -169,15 +159,6 @@ export class MavenServicePipeline extends Stack {
           extraInputs: [ buildOutputArtifact ],
           inputArtifact: sourceCodeArtifact,
           outputs: [devDeployOutputArtifact]
-        }),
-      ],
-    });
-
-    pipelineStages.push({
-      stageName: 'Approve_Deploy_Pre',
-      actions: [
-        new pipeline_actions.ManualApprovalAction({
-          actionName: 'Approve',
         }),
       ],
     });
