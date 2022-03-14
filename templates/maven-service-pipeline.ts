@@ -202,6 +202,29 @@ export class MavenServicePipeline extends Stack {
       artifactBucket: artifactsBucket,
     });
   };
+
+  serviceToRepo (serviceName:string) {
+    
+  }
+
+  getRepoMap () {
+    const repoMap = new Map<string, string>();
+
+    repoMap.set('finance-portal', 'Finance-Portal');
+    repoMap.set('kong-internal-proxy', 'kong-db-less-internal');
+    repoMap.set('kong-internal-proxy', 'kong-db-less-internal');
+    repoMap.set('kong-proxy', 'kong-db-less-external');
+    repoMap.set('onboarding-services-private-service', 'onboarding-services');
+    repoMap.set('ops-portal-service', 'Ops_Portal');
+    repoMap.set('pfm-data-bridge-service', 'pfm-data-bridge');
+    repoMap.set('pfm-wiremock-service', 'pfm-wiremock');
+    repoMap.set('product-maintenance-services', 'banking-product-maintenance-services');
+    repoMap.set('pfm-wiremock-service', 'pfm-wiremock');
+    repoMap.set('pfm-wiremock-service', 'pfm-wiremock');
+    repoMap.set('pfm-wiremock-service', 'pfm-wiremock');
+    repoMap.set('pfm-wiremock-service', 'pfm-wiremock');
+
+  }
 }
 
 const resolveEnvironment = (branch: string): string => {

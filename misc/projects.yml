@@ -4,9 +4,9 @@ services:
     propertiesFilePath: authentication-services/target/maven-archiver/pom.properties
     branches: 
      - migrate
-  - name: auto-account-creation-service
+  - name: auto-account-creation
     replicas: 1
-    propertiesFilePath: auto-account-creation-service/target/maven-archiver/pom.properties
+    propertiesFilePath: auto-account-creation/target/maven-archiver/pom.properties
     branches: 
      - migrate
   - name: banking-services
@@ -19,9 +19,9 @@ services:
     propertiesFilePath: bankserv-services/target/maven-archiver/pom.properties
     branches: 
      - migrate
-  - name: card-delivery-services
+  - name: card-delivery-service
     replicas: 1
-    propertiesFilePath: card-delivery-services/target/maven-archiver/pom.properties
+    propertiesFilePath: card-delivery-service/target/maven-archiver/pom.properties
     branches: 
      - migrate
   - name: card-self-service
@@ -179,9 +179,9 @@ services:
     propertiesFilePath: product-maintenance-services/target/maven-archiver/pom.properties
     branches: 
      - migrate
-  - name: product-servicing-service
+  - name: product-servicing
     replicas: 1
-    propertiesFilePath: product-servicing-service/target/maven-archiver/pom.properties
+    propertiesFilePath: product-servicing/target/maven-archiver/pom.properties
     branches: 
      - migrate
   - name: provider-services
@@ -209,9 +209,9 @@ services:
     propertiesFilePath: transaction-event-services/target/maven-archiver/pom.properties
     branches: 
      - migrate
-  - name: transaction-listener-service
+  - name: transaction-listener
     replicas: 1
-    propertiesFilePath: transaction-listener-service/target/maven-archiver/pom.properties
+    propertiesFilePath: transaction-listener/target/maven-archiver/pom.properties
     branches: 
      - migrate
   - name: transaction-services
@@ -219,9 +219,9 @@ services:
     propertiesFilePath: transaction-services/target/maven-archiver/pom.properties
     branches: 
      - migrate
-  - name: transactional-wiremock-service
+  - name: transactional-wiremock
     replicas: 1
-    propertiesFilePath: transactional-wiremock-service/target/maven-archiver/pom.properties
+    propertiesFilePath: transactional-wiremock/target/maven-archiver/pom.properties
     branches: 
      - migrate
   - name: ussd-services
