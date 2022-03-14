@@ -1,6 +1,7 @@
-- name: pfm-services
-  replicas: 2
-  propertiesFilePath: pfm-services-deployment/target/maven-archiver/pom.properties
-  branches:
-    - master
+services:
+  - name: pfm-services
+    replicas: 2
+    propertiesFilePath: pfm-services-deployment/target/maven-archiver/pom.properties
+    branches:
+      - master
     # - develop
