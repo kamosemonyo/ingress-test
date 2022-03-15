@@ -6,21 +6,45 @@ export class ServiceBuilder {
   private static filepath:PathLike = './misc/projects.yml';
 
   static buildJavaServices ():Service[] {
+    return this.buildService('maven', this.buildJavaService);
+  }
+
+  static buildDockerServices ():Service [] {
+    return this.buildService('docker', this.buildDockerService)
+  }
+
+  static buildService(template:string, builderCallback:Function) {
     const config:any = this.readConfig()
     const services:Service[] = [];
 
-    for (const service of config.services) {
-      const jService = new JavaService(
-        service.name,
-        service.replicas,
-        service.propertiesFilePath,
-        service.branches
-      );
-      
+    const javaServices = config.services.filter(
+      (service:any) => service.template == template
+    )
+
+    for (const service of javaServices) {
+      const jService = builderCallback(service)
       services.push(jService);
     }
 
     return services;
+  }
+
+  static buildJavaService (service:any) {
+    return new JavaService(
+      service.name,
+      service.replicas,
+      service.propertiesFilePath,
+      service.branches
+    );
+  }
+
+  static buildDockerService (service:any) {
+    return new JavaService(
+      service.name,
+      service.replicas,
+      service.propertiesFilePath,
+      service.branches
+    );
   }
 
   static readConfig () {
