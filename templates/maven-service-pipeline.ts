@@ -71,7 +71,7 @@ export class MavenServicePipeline extends Stack {
     const replicasParam = new CfnParameter(this, 'replicas', {
       type: 'Number',
       description: 'K8s deployment replicas, defaults to 1',
-      default: props.replicas,
+      default: 1,
     });
 
     const repositoryName = props.repositoryName;
@@ -156,7 +156,7 @@ export class MavenServicePipeline extends Stack {
           repositoryName,
           environment: 'dev',
           account: Stack.of(this).account,
-          replicas: replicasParam.valueAsString,
+          replicas: props.replicas.toString(),
           clusterName: EKS_NON_PROD_CLUSTER_NAME,
           extraInputs: [ buildOutputArtifact ],
           inputArtifact: sourceCodeArtifact,
@@ -176,7 +176,7 @@ export class MavenServicePipeline extends Stack {
           repositoryName,
           environment: 'preprod',
           clusterName: EKS_NON_PROD_CLUSTER_NAME,
-          replicas: replicasParam.valueAsString,
+          replicas: props.replicas.toString(),
           extraInputs: [ buildOutputArtifact ],
           account: Stack.of(this).account,
           inputArtifact: sourceCodeArtifact,
