@@ -1,6 +1,377 @@
-- name: pfm-services
-  replicas: 2
-  propertiesFilePath: pfm-services-deployment/target/maven-archiver/pom.properties
-  branches:
-    - master
-    # - develop
+services:
+  - name: authentication-services
+    template: maven
+    replicas: 
+      pre: 1
+      prod: 1
+    propertiesFile: authentication-services-impl/target/maven-archiver/pom.properties
+    branches: 
+     - migrate
+  - name: auto-account-creation
+    template: maven
+    replicas:
+      pre: 1
+      prod: 1
+    propertiesFile: auto-account-creation-impl/target/maven-archiver/pom.properties
+    branches: 
+     - migrate
+  - name: banking-services
+    template: maven
+    replicas:
+      pre: 1
+      prod: 1
+    propertiesFile: banking-services-impl/target/maven-archiver/pom.properties
+    branches: 
+     - migrate
+  - name: bankserv-services
+    template: maven
+    replicas:
+      pre: 1
+      prod: 1
+    propertiesFile: docker/files/pom.properties
+    branches: 
+     - migrate
+  - name: card-delivery-service
+    template: maven
+    replicas:
+      pre: 1
+      prod: 1
+    propertiesFile: card-delivery-services-impl/target/maven-archiver/pom.properties
+    branches: 
+     - migrate
+  - name: card-self-service
+    template: maven
+    replicas:
+      pre: 1
+      prod: 1
+    propertiesFile: card-self-service-impl/target/maven-archiver/pom.properties
+    branches: 
+     - migrate
+  - name: channel-policy-services
+    template: maven
+    replicas:
+      pre: 1
+      prod: 1
+    propertiesFile: channel-policy-services-deployment/target/maven-archiver/pom.properties
+    branches: 
+     - migrate
+  - name: commerce-services
+    template: maven
+    replicas:
+      pre: 1
+      prod: 1
+    propertiesFile: commerce-services-impl/target/maven-archiver/pom.properties
+    branches: 
+     - migrate
+  - name: documents-service
+    template: maven
+    replicas:
+      pre: 1
+      prod: 1
+    propertiesFile: documents-service-endpoint/target/maven-archiver/pom.properties
+    branches: 
+     - migrate
+  - name: email-services
+    template: maven
+    replicas:
+      pre: 1
+      prod: 1
+    propertiesFile: email-services-deployment/target/maven-archiver/pom.properties
+    branches: 
+     - migrate
+  - name: fica-services
+    template: maven
+    replicas:
+      pre: 1
+      prod: 1
+    propertiesFile: fica-services-impl/target/maven-archiver/pom.properties
+    branches: 
+     - migrate
+  - name: finance-portal
+    template: angular
+    replicas:
+      pre: 1
+      prod: 1
+    propertiesFile: finance-portal/target/maven-archiver/pom.properties
+    branches: 
+     - migrate
+  - name: footprint-services-admin
+    template: maven
+    replicas:
+      pre: 1
+      prod: 1
+    propertiesFile: admin/target/maven-archiver/pom.properties
+    branches: 
+     - migrate
+  - name: footprint-services
+    template: maven
+    replicas:
+      pre: 1
+      prod: 1
+    propertiesFile: footprint-services/target/maven-archiver/pom.properties
+    branches: 
+     - migrate
+  - name: forensic-services
+    template: maven
+    replicas:
+      pre: 1
+      prod: 1
+    propertiesFile: impl/target/maven-archiver/pom.properties
+    branches: 
+     - migrate
+  - name: health-services
+    template: maven
+    replicas:
+      pre: 1
+      prod: 1
+    propertiesFile: health-services-impl/target/maven-archiver/pom.properties
+    branches: 
+     - migrate
+  - name: identity-services
+    template: maven
+    replicas:
+      pre: 1
+      prod: 1
+    propertiesFile: identity-services-impl/target/maven-archiver/pom.properties
+    branches: 
+     - migrate
+  - name: inbox-messages-admin-ui
+    template: angular
+    replicas:
+      pre: 1
+      prod: 1
+    propertiesFile: inbox-messages-admin-ui/target/maven-archiver/pom.properties
+    branches: 
+     - migrate
+  - name: info-services
+    template: maven
+    replicas:
+      pre: 1
+      prod: 1
+    propertiesFile: info-services-web/target/maven-archiver/pom.properties
+    branches: 
+     - migrate
+  - name: internal-servicing-admin
+    template: maven
+    replicas:
+      pre: 1
+      prod: 1
+    propertiesFile: internal-servicing-admin/target/maven-archiver/pom.properties
+    branches: 
+     - migrate
+  - name: kong-internal-proxy
+    template: docker
+    replicas:
+      pre: 1
+      prod: 1
+    propertiesFile: kong-internal-proxy/target/maven-archiver/pom.properties
+    branches: 
+     - migrate
+  - name: kong-internal-proxy-ssl
+    template: docker
+    replicas:
+      pre: 1
+      prod: 1
+    propertiesFile: kong-internal-proxy-ssl/target/maven-archiver/pom.properties
+    branches: 
+     - migrate
+  - name: kong-proxy
+    template: docker
+    replicas:
+      pre: 1
+      prod: 1
+    propertiesFile: kong-proxy/target/maven-archiver/pom.properties
+    branches: 
+     - migrate
+  - name: kong-proxy-ssl
+    template: docker
+    replicas:
+      pre: 1
+      prod: 1
+    propertiesFile: kong-proxy-ssl/target/maven-archiver/pom.properties
+    branches: 
+     - migrate
+  - name: member-services
+    template: maven
+    replicas:
+      pre: 1
+      prod: 1
+    propertiesFile: member-services-impl/target/maven-archiver/pom.properties
+    branches: 
+     - migrate
+  - name: micro-banking-services
+    template: maven
+    replicas:
+      pre: 1
+      prod: 1
+    propertiesFile: micro-banking-services-deployment/target/maven-archiver/pom.properties
+    branches: 
+     - migrate
+  - name: notification-services
+    template: maven
+    replicas:
+      pre: 1
+      prod: 1
+    propertiesFile: notification-services-impl/target/maven-archiver/pom.properties
+    branches: 
+     - migrate
+  - name: onboarding-services-private-service
+    template: skip
+    replicas:
+      pre: 1
+      prod: 1
+    propertiesFile: onboarding-services-private-service/target/maven-archiver/pom.properties
+    branches: 
+     - migrate
+  - name: onboarding-services
+    template: maven
+    replicas:
+      pre: 1
+      prod: 1
+    propertiesFile: impl/target/maven-archiver/pom.properties
+    branches: 
+     - migrate
+  - name: ops-portal-service
+    template: angular
+    replicas:
+      pre: 1
+      prod: 1
+    propertiesFile: ops-portal-service/target/maven-archiver/pom.properties
+    branches: 
+     - migrate
+  - name: payment-services
+    template: maven
+    replicas:
+      pre: 1
+      prod: 1
+    propertiesFile: payment-services-impl/target/maven-archiver/pom.properties
+    branches: 
+     - migrate
+  - name: pfm-data-bridge
+    template: maven
+    replicas:
+      pre: 1
+      prod: 1
+    propertiesFile: pfm-data-bridge-impl/target/maven-archiver/pom.properties
+    branches: 
+     - migrate
+  - name: pfm-services
+    template: maven
+    replicas:
+      pre: 1
+      prod: 1
+    propertiesFile: pfm-services-deployment/target/maven-archiver/pom.properties
+    branches: 
+     - migrate
+  - name: pfm-wiremock-service
+    template: docker
+    replicas:
+      pre: 1
+      prod: 1
+    propertiesFile: pfm-wiremock-service/target/maven-archiver/pom.properties
+    branches: 
+     - migrate
+  - name: portal-services
+    template: maven
+    replicas:
+      pre: 1
+      prod: 1
+    propertiesFile: portal-services-web/target/maven-archiver/pom.properties
+    branches: 
+     - migrate
+  - name: banking-product-maintenance-services
+    template: maven
+    replicas:
+      pre: 1
+      prod: 1
+    propertiesFile: product-maintenance-services/target/maven-archiver/pom.properties
+    branches: 
+     - migrate
+  - name: product-servicing
+    template: maven
+    replicas:
+      pre: 1
+      prod: 1
+    propertiesFile: product-servicing-impl/target/maven-archiver/pom.properties
+    branches: 
+     - migrate
+  - name: provider-services
+    template: docker
+    replicas:
+      pre: 1
+      prod: 1
+    propertiesFile: provider-services/target/maven-archiver/pom.properties
+    branches: 
+     - migrate
+  - name: risk-services
+    template: maven
+    replicas:
+      pre: 1
+      prod: 1
+    propertiesFile: risk-services-deployment/target/maven-archiver/pom.properties
+    branches: 
+     - migrate
+  - name: setting-services
+    template: maven
+    replicas:
+      pre: 1
+      prod: 1
+    propertiesFile: setting-services/target/maven-archiver/pom.properties
+    branches: 
+     - migrate
+  - name: sftp-monitor-server
+    template: maven
+    replicas:
+      pre: 1
+      prod: 1
+    propertiesFile: docker/files/pom.properties
+    branches: 
+     - migrate
+  - name: transaction-event-services
+    template: maven
+    replicas:
+      pre: 1
+      prod: 1
+    propertiesFile: transaction-event-service-impl/target/maven-archiver/pom.properties
+    branches: 
+     - migrate
+  - name: transaction-listener
+    template: maven
+    replicas:
+      pre: 1
+      prod: 1
+    propertiesFile: docker/files/pom.properties
+    branches: 
+     - migrate
+  - name: transaction-services
+    template: maven
+    replicas:
+      pre: 1
+      prod: 1
+    propertiesFile: transaction-services-impl/target/maven-archiver/pom.properties
+    branches: 
+     - migrate
+  - name: transactional-wiremock
+    template: maven
+    replicas:
+      pre: 1
+      prod: 1
+    propertiesFile: docker/scripts/pom.properties
+    branches: 
+     - migrate
+  - name: ussd-services
+    template: maven
+    replicas:
+      pre: 1
+      prod: 1
+    propertiesFile: ussd-services-web/target/maven-archiver/pom.properties
+    branches: 
+     - migrate
+  - name: voc-services
+    template: maven
+    replicas:
+      pre: 1
+      prod: 1
+    propertiesFile: voc-services-impl/target/maven-archiver/pom.properties
+    branches: 
+     - migrate

@@ -8,12 +8,16 @@ import '@aws-cdk/assert/jest';
 import { toValidConstructName } from '../lib/util';
 
 const repositoryName = 'pfm-service';
+const propertiesFile = 'pfm-service/target/maven-archive/pom.properties';
+const replicas = 1;
 const artifactsBucket = 'pipeline-artifacts';
 
 test('Stack Snapshot', () => {
-  const app = new App({ context: { repositoryName }});
+  const app = new App({ context: { repositoryName, propertiesFile, replicas }});
   const stack = new MavenServicePipeline(app, toValidConstructName(repositoryName), {
     repositoryName,
+    propertiesFile,
+    replicas,
     env: {
       account: '23456789111',
       region: 'af-south-1'
@@ -29,6 +33,8 @@ test('Throw error without repository context', () => {
     const app = new App();
     const stack = new MavenServicePipeline(app, toValidConstructName(repositoryName), {
       repositoryName,
+      propertiesFile,
+      replicas,
       env: {
         account: '23456789111',
         region: 'af-south-1'
@@ -41,9 +47,11 @@ test('Throw error without repository context', () => {
 });
 
 test('Creates all required resources', () => {
-  const app = new App({ context: { repositoryName }});
+  const app = new App({ context: { repositoryName, propertiesFile, replicas }});
   const stack = new MavenServicePipeline(app, toValidConstructName(repositoryName), {
     repositoryName,
+    propertiesFile,
+    replicas,
     env: {
       account: '23456789111',
       region: 'af-south-1'
@@ -112,9 +120,11 @@ test('Creates all required resources', () => {
 test('Builds pipeline correctly', () => {
   process.env.SOURCE_BRANCH = 'develop';
 
-  const app = new App({ context: { repositoryName }});
+  const app = new App({ context: { repositoryName, propertiesFile, replicas }});
   const stack = new MavenServicePipeline(app, toValidConstructName(repositoryName), {
     repositoryName,
+    propertiesFile,
+    replicas,
     env: {
       account: '23456789111',
       region: 'af-south-1'

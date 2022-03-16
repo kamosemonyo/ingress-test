@@ -3,7 +3,7 @@ import { LinuxBuildImage } from 'aws-cdk-lib/aws-codebuild';
 export const ECR_REGION = 'eu-west-1';
 export const validEnvironmentNames = ['dev', 'preprod', 'prod'];
 export const multiplyMoneyK8sSecret = 'momentum-money-secrets';
-export const mainGitBranch = 'master';
+export const mainGitBranch = 'migrate';
 export const codeBuildSpecVersion = '0.2';
 export const nexusRepository = 'http://nexus-ces.mmih.biz';
 export const defaultCodeBuildEnvironment = { buildImage: LinuxBuildImage.STANDARD_3_0, privileged: true };
@@ -19,3 +19,6 @@ export const GITHUB_HOST = 'github.com';
 export const EKS_NON_PROD_CLUSTER_NAME = 'non-prod';
 
 export const ENVIRONMENT_DEV = 'dev';
+
+export const PRE_ENV = 'pre'
+export const PROD_ENV = 'prod'

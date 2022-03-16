@@ -2,7 +2,6 @@ import { Construct  } from "constructs";
 import { CfnParameter, RemovalPolicy, Stack, StackProps } from "aws-cdk-lib";
 import { aws_s3 as s3 } from 'aws-cdk-lib';
 import { aws_codepipeline as codepipeline } from "aws-cdk-lib";
-import { aws_codepipeline_actions as pipeline_actions } from "aws-cdk-lib";
 import { aws_ec2 as ec2 } from "aws-cdk-lib";
 
 import { createEcrRepository } from "../modules/ecr-repository";
@@ -12,7 +11,9 @@ import { CODE_BUILD_VPC_NAME, EKS_NON_PROD_CLUSTER_NAME, mainGitBranch } from ".
 import { createMavenDeployAction, createMavenDockerBuildAction, createMavenRelease } from "../modules/mvn-docker-build";
 
 interface stackProps extends StackProps {
-  repositoryName: string
+  repositoryName:string,
+  propertiesFile:string,
+  replicas: Number
 }
 
 export class MavenServicePipeline extends Stack {
@@ -46,7 +47,7 @@ export class MavenServicePipeline extends Stack {
     const propertiesFilePathParam = new CfnParameter(this, 'propertiesFile', {
       type: 'String',
       description: 'pom.properties file path',
-      default: process.env.POM_PROPERTIES_FILE,
+      default: props.propertiesFile,
     });
 
     const pomFilePathParam = new CfnParameter(this, 'pomFile', {
@@ -70,7 +71,7 @@ export class MavenServicePipeline extends Stack {
     const replicasParam = new CfnParameter(this, 'replicas', {
       type: 'Number',
       description: 'K8s deployment replicas, defaults to 1',
-      default: 1,
+      default: props.replicas,
     });
 
     const repositoryName = props.repositoryName;
@@ -104,15 +105,6 @@ export class MavenServicePipeline extends Stack {
           bucketName: bucketNameParam.valueAsString,
         }),
       ]
-    });
-
-    pipelineStages.push({
-      stageName: 'Approve_Build',
-      actions: [
-        new pipeline_actions.ManualApprovalAction({
-          actionName: 'Approve',
-        }),
-      ],
     });
 
     const vpc = ec2.Vpc.fromLookup(this, 'CodeBuildVpc', {
@@ -173,15 +165,6 @@ export class MavenServicePipeline extends Stack {
       ],
     });
 
-    pipelineStages.push({
-      stageName: 'Approve_Deploy_Pre',
-      actions: [
-        new pipeline_actions.ManualApprovalAction({
-          actionName: 'Approve',
-        }),
-      ],
-    });
-
     const preDeployOutputArtifact = new codepipeline.Artifact();
 
     pipelineStages.push({
@@ -221,6 +204,10 @@ export class MavenServicePipeline extends Stack {
       artifactBucket: artifactsBucket,
     });
   };
+
+  serviceToRepo (serviceName:string) {
+    
+  }
 }
 
 const resolveEnvironment = (branch: string): string => {
