@@ -4,17 +4,18 @@ import { App } from 'aws-cdk-lib';
 
 import { ServiceBuilder } from '../misc/service-builder';
 import { MavenServicePipeline } from '../templates/maven-service-pipeline';
+import { Account } from '../lib/account';
 
 const app = new App();
-const javaServices = ServiceBuilder.buildJavaServices();
+const env = app.node.tryGetContext('env')
+const javaServices = ServiceBuilder.buildJavaServices(env);
 
 for (const javaService of javaServices) {
   new MavenServicePipeline(app, `${javaService.name}MavenPipeline`, {
     repositoryName: javaService.name,
-    env: {
-      region: 'eu-west-1',
-      account: '737245153745',
-    }
+    propertiesFile: javaService.propertiesFile,
+    replicas: javaService.replicas,
+    env: Account.from(env)
   });
 }
 

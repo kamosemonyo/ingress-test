@@ -43,6 +43,7 @@ const createMavenDockerBuildProject = (scope: Construct, params: parameters): Pi
   role.addToPrincipalPolicy(new PolicyStatement({
     effect: Effect.ALLOW,
     actions: [
+      'codebuild:StartBuild',
       'ecr:BatchGetImage',
       'ecr:BatchCheckLayerAvailability',
       "ecr:CompleteLayerUpload",

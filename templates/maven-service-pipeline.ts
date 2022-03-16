@@ -11,7 +11,9 @@ import { CODE_BUILD_VPC_NAME, EKS_NON_PROD_CLUSTER_NAME, mainGitBranch } from ".
 import { createMavenDeployAction, createMavenDockerBuildAction, createMavenRelease } from "../modules/mvn-docker-build";
 
 interface stackProps extends StackProps {
-  repositoryName: string
+  repositoryName:string,
+  propertiesFile:string,
+  replicas: Number
 }
 
 export class MavenServicePipeline extends Stack {
@@ -45,7 +47,7 @@ export class MavenServicePipeline extends Stack {
     const propertiesFilePathParam = new CfnParameter(this, 'propertiesFile', {
       type: 'String',
       description: 'pom.properties file path',
-      default: process.env.POM_PROPERTIES_FILE,
+      default: props.propertiesFile,
     });
 
     const pomFilePathParam = new CfnParameter(this, 'pomFile', {
@@ -69,7 +71,7 @@ export class MavenServicePipeline extends Stack {
     const replicasParam = new CfnParameter(this, 'replicas', {
       type: 'Number',
       description: 'K8s deployment replicas, defaults to 1',
-      default: 1,
+      default: props.replicas,
     });
 
     const repositoryName = props.repositoryName;
@@ -205,25 +207,6 @@ export class MavenServicePipeline extends Stack {
 
   serviceToRepo (serviceName:string) {
     
-  }
-
-  getRepoMap () {
-    const repoMap = new Map<string, string>();
-
-    repoMap.set('finance-portal', 'Finance-Portal');
-    repoMap.set('kong-internal-proxy', 'kong-db-less-internal');
-    repoMap.set('kong-internal-proxy', 'kong-db-less-internal');
-    repoMap.set('kong-proxy', 'kong-db-less-external');
-    repoMap.set('onboarding-services-private-service', 'onboarding-services');
-    repoMap.set('ops-portal-service', 'Ops_Portal');
-    repoMap.set('pfm-data-bridge-service', 'pfm-data-bridge');
-    repoMap.set('pfm-wiremock-service', 'pfm-wiremock');
-    repoMap.set('product-maintenance-services', 'banking-product-maintenance-services');
-    repoMap.set('pfm-wiremock-service', 'pfm-wiremock');
-    repoMap.set('pfm-wiremock-service', 'pfm-wiremock');
-    repoMap.set('pfm-wiremock-service', 'pfm-wiremock');
-    repoMap.set('pfm-wiremock-service', 'pfm-wiremock');
-
   }
 }
 
