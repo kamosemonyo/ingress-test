@@ -1,14 +1,16 @@
 import { Construct } from 'constructs';
 import { IVpc } from 'aws-cdk-lib/aws-ec2';
-import { Effect, PolicyStatement, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
 import { CodeBuildAction } from "aws-cdk-lib/aws-codepipeline-actions";
-import { BuildSpec, PipelineProject } from 'aws-cdk-lib/aws-codebuild';
+import { BuildEnvironmentVariableType, BuildSpec, PipelineProject, Project } from 'aws-cdk-lib/aws-codebuild';
 import { Artifact } from 'aws-cdk-lib/aws-codepipeline';
 
 import { toValidConstructName } from '../lib/util';
 import { CommonCommands } from '../lib/commands';
 
 import * as consts from '../lib/constants';
+import { MoneyRoleBuilder } from './money-role-builder';
+import { aws_s3 } from 'aws-cdk-lib';
+import { Effect, IPrincipal, IRole, PolicyStatement } from 'aws-cdk-lib/aws-iam';
 
 interface parameters {
   vpc: IVpc
@@ -20,6 +22,8 @@ interface parameters {
   region: string
   inputArtifact: Artifact
   outputArtifact: Artifact
+  environment: string
+  pipelineRole: IPrincipal
 };
 
 export const createMavenDockerBuildAction = (scope: Construct, params: parameters): CodeBuildAction => {
@@ -35,55 +39,18 @@ export const createMavenDockerBuildAction = (scope: Construct, params: parameter
 
 const createMavenDockerBuildProject = (scope: Construct, params: parameters): PipelineProject => {
   const projectName = `${params.repositoryName}-${params.branch}-build`;
+  const role = MoneyRoleBuilder.buildCodeBuildRole(
+    scope,
+    params.environment,
+    params.repositoryName,
+    params.account,
+    params.region
+  );
 
-  const role = new Role(scope, `${params.repositoryName}MavenDockerBuildRole`, {
-    assumedBy: new ServicePrincipal('codebuild.amazonaws.com'),
-  });
-
-  role.addToPrincipalPolicy(new PolicyStatement({
-    effect: Effect.ALLOW,
-    actions: [
-      'codebuild:StartBuild',
-      'ecr:BatchGetImage',
-      'ecr:BatchCheckLayerAvailability',
-      "ecr:CompleteLayerUpload",
-      "ecr:InitiateLayerUpload",
-      'ecr:GetDownloadUrlForLayer',
-      "ecr:PutImage",
-      "ecr:UploadLayerPart"
-    ],
-    resources: [
-      `arn:aws:ecr:${consts.ECR_REGION}:${params.account}:repository/${params.repositoryName}`
-    ]
-  }));
-
-  role.addToPrincipalPolicy(new PolicyStatement({
-    effect: Effect.ALLOW,
-    actions: [
-      'ecr:GetAuthorizationToken',
-    ],
-    resources: ['*']
-  }));
-
-  role.addToPrincipalPolicy(new PolicyStatement({
-    effect: Effect.ALLOW,
-    actions: [
-      'kms:Decrypt',
-      'ssm:GetParameter',
-      'ssm:GetParameters',
-      'ssm:GetParametersByPath',
-      'ssm:GetParameterHistory'
-    ],
-    resources: [
-      `arn:aws:ssm:${params.region ?? '*'}:${params.account ?? '*'}:parameter${consts.NEXUS_USERNAME_SSM_KEY}`,
-      `arn:aws:ssm:${params.region ?? '*'}:${params.account ?? '*'}:parameter${consts.NEXUS_PASSWORD_SSM_KEY}`,
-      `arn:aws:kms:${params.region ?? '*'}:${params.account ?? '*'}:key/*`,
-    ]
-  }));
-
-  const buildProject = new PipelineProject(scope, `${toValidConstructName(params.repositoryName)}MavenDockerCodeBuildProject`, {
-    role,
-    projectName,
+  const stageName = `${toValidConstructName(params.repositoryName)}MavenDockerCodeBuildProject`;
+  const buildProject = new PipelineProject(scope, stageName, {
+    role: role,
+    projectName: projectName,
     buildSpec: buildMavenDockerBuildSpec(params),
     environment: consts.defaultCodeBuildEnvironment,
     vpc: params.vpc,
@@ -105,26 +72,33 @@ const buildMavenDockerBuildSpec = (params: parameters): BuildSpec => {
           docker: 18,
         },
       },
-      build: {
+      pre_build: {
         commands: [
           'java -version',
           'mvn -version',
           // Create ~/.m2/settings.xml file
           ...CommonCommands.setupMvnSettings(params.region),
-          // Get and store current version for Rollback
           `export ROLLBACK_VERSION=$(mvn org.apache.maven.plugins:maven-help-plugin:2.1.1:evaluate -Dexpression=project.version | sed -n -e '/^\\[.*\\]/ !{ /^[0-9]/ { p; q } }')`,
           `echo "Resolved current version $ROLLBACK_VERSION"`,
           'echo $ROLLBACK_VERSION > ROLLBACK_VERSION',
           // Calculate next release version
-          `mvn -f ${params.pomFilePath} build-helper:parse-version versions:set -DnewVersion='\${parsedVersion.majorVersion}.\${parsedVersion.nextMinorVersion}.'0 versions:commit`,
+          // `mvn -f ${params.pomFilePath} build-helper:parse-version versions:set -DnewVersion='\${parsedVersion.majorVersion}.\${parsedVersion.nextMinorVersion}.'0 versions:commit`,
           // Maven build
+        ]
+      },
+      build: {
+        commands: [
           'mvn clean install',
           `export VERSION=\`grep -oP \'version=\\K.*\' ${params.propertiesFilePath}\``,
           `echo "Resolved new version $VERSION"`,
           'echo $VERSION > VERSION',
           `cp ${params.propertiesFilePath} docker/files`,
           // Deploy Maven artifacts for version
-          'mvn deploy',
+          // 'mvn deploy',
+        ]
+      },
+      post_build: {
+        commands: [
           // Build and push docker image for version snapshot
           `aws ecr get-login-password --region ${consts.ECR_REGION} | docker login --username AWS --password-stdin ${params.account}.dkr.ecr.${consts.ECR_REGION}.amazonaws.com`,
           `docker build -t ${params.account}.dkr.ecr.${consts.ECR_REGION}.amazonaws.com/${params.repositoryName}:$VERSION-SNAPSHOT .`,
@@ -157,7 +131,8 @@ interface deployJobParams {
   clusterName: string
   inputArtifact: Artifact
   extraInputs: Artifact[]
-  outputs?: Artifact[]
+  outputs?: Artifact[],
+  pipelineRole: IRole
 }
 
 export const createMavenDeployAction = (scope: Construct, params: deployJobParams): CodeBuildAction => {
@@ -174,30 +149,10 @@ export const createMavenDeployAction = (scope: Construct, params: deployJobParam
 
 const createMavenDeployBuildProject = (scope: Construct, params: deployJobParams): PipelineProject => {
   const projectName = `${params.repositoryName}-${params.branch}-deploy-${params.environment}`;
-  const EKS_DEPLOY_ROLE_ARN = `arn:aws:iam::${params.account}:role/eks-deploy`;
+  const stageName = `${toValidConstructName(params.repositoryName)}Deploy${params.environment}CodeBuildProject`;
 
-  // Role should be created with EKS cluster and mapped to admin group
-  const role =  Role.fromRoleArn(scope, `${params.environment.toUpperCase()}${toValidConstructName(params.repositoryName)}EksDeployRole`, EKS_DEPLOY_ROLE_ARN);
-
-  role.addToPrincipalPolicy(new PolicyStatement({
-    effect: Effect.ALLOW,
-    actions: [
-      'sts:AssumeRole',
-    ],
-    resources: [EKS_DEPLOY_ROLE_ARN]
-  }));
-
-  role.addToPrincipalPolicy(new PolicyStatement({
-    effect: Effect.ALLOW,
-    actions: [
-      'eks:DescribeCluster',
-    ],
-    resources: ['*']
-  }));
-
-  const buildProject = new PipelineProject(scope, `${toValidConstructName(params.repositoryName)}Deploy${params.environment}CodeBuildProject`, {
-    role,
-    projectName,
+  const buildProject = new PipelineProject(scope, stageName, {
+    projectName: projectName,
     vpc: params.vpc,
     buildSpec: buildMavenDeployBuildSpec(params),
     environment: consts.defaultCodeBuildEnvironment,
@@ -205,7 +160,16 @@ const createMavenDeployBuildProject = (scope: Construct, params: deployJobParams
       onePerAz: true,
     },
   });
-  
+
+  const buckerId = `momentum-money-k8s-templates-${params.repositoryName}-${params.environment}`;
+  const k8sBucket = aws_s3.Bucket.fromBucketArn(
+    scope,
+    buckerId,
+    `arn:aws:s3:::${consts.K8S_TEMPLATES_BUCKET_NAME}`
+  );
+
+  k8sBucket.grantReadWrite(buildProject);
+
   return buildProject;
 }
 
@@ -214,11 +178,6 @@ const buildMavenDeployBuildSpec = (params: deployJobParams): BuildSpec => {
 
   const buildSpec = BuildSpec.fromObject({
     version: consts.codeBuildSpecVersion,
-    // env: {
-    //   'secrets-manager': {
-    //     GITHUB_AUTH_TOKEN: consts.GITHUB_TOKEN_SECRET_NAME
-    //   }
-    // },
     phases: {
       install: {
         commands: [
@@ -290,64 +249,25 @@ interface releaseParams {
   githubOrgName: string
   pomFilePath: string
   inputArtifact: Artifact
-  extraInputs?: Artifact[]
+  extraInputs?: Artifact[],
+  environment: string,
 }
 
 const createMavenReleaseProject = (scope: Construct, params: releaseParams): PipelineProject => {
   const projectName = `${params.repositoryName}-${params.branch}-release`;
+  const role = MoneyRoleBuilder.buildCodeBuildReleaseRole(
+    scope,
+    params.environment,
+    params.repositoryName,
+    params.account,
+    params.region
+  );
 
-  const role = new Role(scope, `${toValidConstructName(params.repositoryName)}MavenReleaseCodeBuildProjectRole`, {
-    roleName: projectName,
-    assumedBy: new ServicePrincipal('codebuild.amazonaws.com'),
-  });
-
-  role.addToPrincipalPolicy(new PolicyStatement({
-    effect: Effect.ALLOW,
-    actions: [
-      'ecr:GetAuthorizationToken',
-      'secretsmanager:ListSecrets',
-    ],
-    resources: ['*']
-  }));
-
-  role.addToPrincipalPolicy(new PolicyStatement({
-    effect: Effect.ALLOW,
-    actions: [
-      'secretsmanager:GetResourcePolicy',
-      'secretsmanager:GetSecretValue',
-      'secretsmanager:DescribeSecret',
-      'secretsmanager:ListSecretVersionIds',
-      ],
-    resources: [
-      `arn:aws:secretsmanager:${params.region ?? '*'}:${params.account ?? '*'}:secret:${consts.GITHUB_TOKEN_SECRET_NAME}-*`,
-    ]
-  }));
-
-  role.addToPrincipalPolicy(new PolicyStatement({
-    effect: Effect.ALLOW,
-    actions: [
-      'ecr:BatchGetImage',
-      'ecr:BatchCheckLayerAvailability',
-      "ecr:CompleteLayerUpload",
-      "ecr:InitiateLayerUpload",
-      'ecr:GetDownloadUrlForLayer',
-      "ecr:PutImage",
-      "ecr:UploadLayerPart"
-    ],
-    resources: [
-      `arn:aws:ecr:${consts.ECR_REGION}:${params.account}:repository/${params.repositoryName}`
-    ]
-  }));
-
-  const buildProject = new PipelineProject(scope, `${toValidConstructName(params.repositoryName)}MavenReleaseCodeBuildProject`, {
+  const stageName = `${toValidConstructName(params.repositoryName)}MavenReleaseCodeBuildProject`;
+  const buildProject = new PipelineProject(scope, stageName, {
     role,
     projectName,
-    // buildSpec: buildMavenDockerBuildSpec(params),
     environment: consts.defaultCodeBuildEnvironment,
-    // vpc: Vpc.fromLookup(scope, 'CodeBuildVpc', {
-    //   vpcName: consts.CODE_BUILD_VPC_NAME,
-    //   isDefault: false,
-    // }),
     subnetSelection: {
       onePerAz: true,
     },
@@ -359,11 +279,7 @@ const createMavenReleaseProject = (scope: Construct, params: releaseParams): Pip
         }
       },
       phases: {
-        install: {
-          // commands: [
-          //   ...CommonCommands.installGithubCLI(),
-          // ]
-        },
+        install: {},
         build: {
           commands: [
             'env',

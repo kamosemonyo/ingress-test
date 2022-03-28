@@ -1,5 +1,4 @@
 import { Construct } from 'constructs';
-import { Effect, PolicyStatement } from 'aws-cdk-lib/aws-iam';
 import { CodeBuildAction } from "aws-cdk-lib/aws-codepipeline-actions";
 import { BuildSpec, PipelineProject } from 'aws-cdk-lib/aws-codebuild';
 import { Artifact } from 'aws-cdk-lib/aws-codepipeline';
@@ -7,6 +6,7 @@ import { toValidConstructName } from '../lib/util';
 import { codeBuildSpecVersion, defaultCodeBuildEnvironment, mainGitBranch, nexusRepository } from '../lib/constants';
 import { IVpc } from 'aws-cdk-lib/aws-ec2';
 import { CommonCommands } from '../lib/commands';
+import { IPrincipal } from 'aws-cdk-lib/aws-iam';
 
 interface parameters {
   branch: string
@@ -18,6 +18,7 @@ interface parameters {
   inputArtifact: Artifact
   outputArtifact: Artifact
   vpc?: IVpc,
+  pipelineRole: IPrincipal
 };
 
 const createMavenDeployAction = (scope: Construct, params: parameters): CodeBuildAction => {
@@ -38,23 +39,6 @@ const createMavenDeployProject = (scope: Construct, params: parameters): Pipelin
     environment: defaultCodeBuildEnvironment,
     vpc: params.vpc,
   });
-
-  buildProject.addToRolePolicy(new PolicyStatement({
-    effect: Effect.ALLOW,
-    actions: [
-      'ssm:DescribeParameters',
-      'ssm:GetParameter',
-      'ssm:GetParameters',
-      'ssm:GetParametersByPath',
-      'ssm:GetParameterHistory',
-      'kms:Decrypt'
-    ],
-    resources: [
-      `arn:aws:ssm:${params.ssmRegion ?? '*'}:${params.ssmAccount ?? '*'}:parameter/mmi/nexus/password`,
-      `arn:aws:ssm:${params.ssmRegion ?? '*'}:${params.ssmAccount ?? '*'}:parameter/mmi/nexus/username`,
-      `arn:aws:kms:${params.ssmRegion ?? '*'}:${params.ssmAccount ?? '*'}:key/*`,
-    ]
-  }));
 
   return buildProject;
 }

@@ -36,7 +36,6 @@ export class ServiceBuilder {
 
   static buildJavaService (env:string, service:any) {
     const replicas = service.replicas.pre;
-    // this.getReplicas(env, service);
 
     return new JavaService(
       service.name,
