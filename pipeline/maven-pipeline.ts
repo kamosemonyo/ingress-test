@@ -4,21 +4,21 @@ import { aws_s3 as s3 } from 'aws-cdk-lib';
 import { aws_codepipeline as codepipeline } from "aws-cdk-lib";
 import { aws_ec2 as ec2 } from "aws-cdk-lib";
 
-import { createEcrRepository } from "../modules/ecr-repository";
-import { getSourceAction } from "../modules/code-source";
+import { createEcrRepository } from "../pipeline_stage/ecr-repository";
+import { getSourceAction } from "../pipeline_stage/code-source";
 import { toValidConstructName } from "../lib/util";
-import { CODE_BUILD_VPC_NAME, EKS_NON_PROD_CLUSTER_NAME, mainGitBranch } from "../lib/constants";
-import { createMavenDeployAction, createMavenDockerBuildAction, createMavenRelease } from "../modules/mvn-docker-build";
+import { CODE_BUILD_VPC_NAME, EKS_NON_PROD_CLUSTER_NAME, ENV_PRE, mainGitBranch } from "../lib/constants";
+import { createMavenDeployAction, createMavenDockerBuildAction, createMavenRelease } from "../pipeline_stage/maven/mvn-build";
 import { Effect, PolicyStatement } from "aws-cdk-lib/aws-iam";
 
-interface stackProps extends StackProps {
+interface MavenPipelineProps extends StackProps {
   repositoryName:string,
   propertiesFile:string,
   replicas: Number
 }
 
-export class MavenServicePipeline extends Stack {
-  constructor(scope: Construct, id: string, props: stackProps) {
+export class MavenPipelineStack extends Stack {
+  constructor(scope: Construct, id: string, props: MavenPipelineProps) {
     super(scope, id, props);
 
     const artifactsBucket: s3.IBucket = new s3.Bucket(this, 'ArtifactsBucket', {
@@ -122,118 +122,29 @@ export class MavenServicePipeline extends Stack {
           pomFilePath: pomFile,
           inputArtifact: sourceCodeArtifact,
           outputArtifact: buildOutputArtifact,
-          environment: 'pre'
+          environment: ENV_PRE
         }),
       ],
     })
 
-    // pipelineStages.push({
-    //   stageName: 'Publish',
-    //   actions: [
-    //     createMavenRelease(this, {
-    //       branch,
-    //       repositoryName,
-    //       region: Stack.of(this).region,
-    //       account: Stack.of(this).account,
-    //       pomFilePath: pomFilePathParam.valueAsString,
-    //       githubOrgName: githubOrgParam.valueAsString,
-    //       extraInputs: [ buildOutputArtifact ],
-    //       inputArtifact: sourceCodeArtifact,
-    //       environment: 'pre'
-    //     })
-    //   ],
-    // });
+    pipeline.addStage({
+      stageName: 'Publish',
+      actions: [
+        createMavenRelease(this, {
+          branch,
+          repositoryName,
+          region: Stack.of(this).region,
+          account: Stack.of(this).account,
+          pomFilePath: pomFile,
+          githubOrgName: githubOrgParam.valueAsString,
+          extraInputs: [ buildOutputArtifact ],
+          inputArtifact: sourceCodeArtifact,
+          environment: ENV_PRE
+        })
+      ],
+    });
 
-    // const devDeployOutputArtifact = new codepipeline.Artifact();
 
-    // pipeline.addStage({
-    //   stageName: 'Deploy_Dev',
-    //   actions: [
-    //     createMavenDeployAction(this, {
-    //       vpc,
-    //       branch,
-    //       repositoryName,
-    //       environment: 'dev',
-    //       account: Stack.of(this).account,
-    //       replicas: props.replicas.toString(),
-    //       clusterName: EKS_NON_PROD_CLUSTER_NAME,
-    //       extraInputs: [ buildOutputArtifact ],
-    //       inputArtifact: sourceCodeArtifact,
-    //       outputs: [devDeployOutputArtifact],
-    //       pipelineRole: pipeline.role
-    //     }),
-    //   ],
-    // })
-
-    // pipelineStages.push({
-    //   stageName: 'Deploy_Dev',
-    //   actions: [
-    //     createMavenDeployAction(this, {
-    //       vpc,
-    //       branch,
-    //       repositoryName,
-    //       environment: 'dev',
-    //       account: Stack.of(this).account,
-    //       replicas: props.replicas.toString(),
-    //       clusterName: EKS_NON_PROD_CLUSTER_NAME,
-    //       extraInputs: [ buildOutputArtifact ],
-    //       inputArtifact: sourceCodeArtifact,
-    //       outputs: [devDeployOutputArtifact]
-    //     }),
-    //   ],
-    // });
-
-    // const preDeployOutputArtifact = new codepipeline.Artifact();
-
-    // pipeline.addStage({
-    //   stageName: 'Deploy_PRE',
-    //   actions: [
-    //     createMavenDeployAction(this, {
-    //       vpc,
-    //       branch,
-    //       repositoryName,
-    //       environment: 'preprod',
-    //       clusterName: EKS_NON_PROD_CLUSTER_NAME,
-    //       replicas: props.replicas.toString(),
-    //       extraInputs: [ buildOutputArtifact ],
-    //       account: Stack.of(this).account,
-    //       inputArtifact: sourceCodeArtifact,
-    //       outputs: [preDeployOutputArtifact],
-    //       pipelineRole: pipeline.role
-    //     }),
-    //   ],
-    // })
-
-    // pipelineStages.push({
-    //   stageName: 'Deploy_PRE',
-    //   actions: [
-    //     createMavenDeployAction(this, {
-    //       vpc,
-    //       branch,
-    //       repositoryName,
-    //       environment: 'preprod',
-    //       clusterName: EKS_NON_PROD_CLUSTER_NAME,
-    //       replicas: props.replicas.toString(),
-    //       extraInputs: [ buildOutputArtifact ],
-    //       account: Stack.of(this).account,
-    //       inputArtifact: sourceCodeArtifact,
-    //       outputs: [preDeployOutputArtifact]
-    //     }),
-    //   ],
-    // });
-
-    // pipelineStages.push({
-    //   stageName: 'Deploy',
-    //   actions: [
-    //     createEksDeployAction(this, {
-    //       project: repositoryName,
-    //       replicas: replicasParam.valueAsNumber,
-    //       environment: resolveEnvironment(branchParam.valueAsString),
-    //       branch: branchParam.valueAsString,
-    //       inputArtifact: buildOutputArtifact,
-    //     }),
-    //   ],
-    // });
   };
 }
 

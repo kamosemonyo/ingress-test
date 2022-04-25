@@ -3,7 +3,7 @@ import 'source-map-support/register';
 import { App } from 'aws-cdk-lib';
 
 import { ServiceBuilder } from '../misc/service-builder';
-import { MavenServicePipeline } from '../templates/maven-service-pipeline';
+import { MavenPipelineStack } from '../pipeline/maven-pipeline';
 import { Account } from '../lib/account';
 
 const app = new App();
@@ -11,7 +11,7 @@ const env = app.node.tryGetContext('env')
 const javaServices = ServiceBuilder.buildJavaServices(env);
 
 for (const javaService of javaServices) {
-  new MavenServicePipeline(app, `${javaService.name}-maven-pipeline`, {
+  new MavenPipelineStack(app, `${javaService.name}-maven-pipeline`, {
     repositoryName: javaService.name,
     propertiesFile: javaService.propertiesFile,
     replicas: javaService.replicas,

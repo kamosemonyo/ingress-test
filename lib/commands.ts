@@ -3,6 +3,8 @@ import { nexusRepository, NEXUS_PASSWORD_SSM_KEY, NEXUS_USERNAME_SSM_KEY } from 
 const GH_VERSION = '2.4.0';
 const KUBECTL_VERSION = '1.15.0';
 const YQ_VERSION = '4.17.2';
+const CLUSTER_REPO = 'aws-eks';
+const CLUSTER_YML_CONFIG_PATH = 'cluster/services.yml';
 
 export class CommonCommands {
   static installCdkCmd: string[] = [
@@ -23,43 +25,49 @@ export class CommonCommands {
     'ls -al',
   ];
 
-  static setupMvnSettings = (region: string) => setupMvnSettings(region);
-  static installGithubCLI = () => installGithubCLI();
-  static installKubectl = () => installKubectl();
-  static installYq = () => installYq();
+  static setupMvnSettings = (region: string):string[] => [
+    `mkdir -p ~/.m2`,
+    `export NEXUS_REPOSITORY=${nexusRepository}`,
+    `export NEXUS_USERNAME=$(aws ssm get-parameter --name "${NEXUS_USERNAME_SSM_KEY}" --region ${region} --output json | jq -r '.[].Value')`,
+    `export NEXUS_PASSWORD=$(aws ssm get-parameter --name "${NEXUS_PASSWORD_SSM_KEY}" --with-decryption --region ${region} --output json | jq -r '.[].Value')`,
+    `echo \" ${getMvnSettingsTemplate()}\" > ~/.m2/settings.tmpl.xml`,
+    `envsubst < ~/.m2/settings.tmpl.xml > ~/.m2/settings.xml`,
+  ];
+
+  static installGithubCLI = ():string[] => [
+    `echo \"Installing Github CLI v${GH_VERSION} in $PWD/bin\"`,
+    `mkdir -p bin`,
+    `curl -LO https://github.com/cli/cli/releases/download/v${GH_VERSION}/gh_${GH_VERSION}_linux_amd64.tar.gz`,
+    `tar -xzf gh_${GH_VERSION}_linux_amd64.tar.gz`,
+    `mv gh_${GH_VERSION}_linux_amd64/bin/gh bin/`
+  ];  
+
+  static installKubectl = ():string[] => [
+    `echo \"Installing Kubectl v${KUBECTL_VERSION} in $PWD/bin\"`,
+    `mkdir -p bin`,
+    `curl -L https://storage.googleapis.com/kubernetes-release/release/v${KUBECTL_VERSION}/bin/linux/amd64/kubectl -o bin/kubectl`,
+    `chmod +x bin/kubectl`
+  ];
+
+  static installYq = ():string[] => [
+    `echo \"Installing Yq v${YQ_VERSION} in $PWD/bin\"`,
+    `mkdir -p bin`,
+    `curl -L https://github.com/mikefarah/yq/releases/download/v${YQ_VERSION}/yq_linux_amd64 -o bin/yq`,
+    'chmod +x bin/yq',
+    'chmod +x bin/yq --version',
+  ];
+
+  static updateCluster = (repo:string , env:string, githubOrg:string):string[] => [
+    `git clone https://$GITHUB_AUTH_TOKEN@github.com/${githubOrg}/${CLUSTER_REPO}.git .crepo`,
+    `cd .crepo`,
+    `git switch -c ${env}`,
+    `bin/yq -i '.services.[] | select(.repo == "${repo}").version = $VERSION' ${CLUSTER_REPO}/${CLUSTER_YML_CONFIG_PATH}`,
+    `git commit -m "update ${repo} to version $VERSION"`,
+    `git tag -a ${repo}-$VERSION -m "update ${repo} to version $VERSION" `,
+    'git push',
+    `rm -rf ${CLUSTER_REPO}`
+  ]
 };
-
-const setupMvnSettings = (region: string): string[] => [
-  `mkdir -p ~/.m2`,
-  `export NEXUS_REPOSITORY=${nexusRepository}`,
-  `export NEXUS_USERNAME=$(aws ssm get-parameter --name "${NEXUS_USERNAME_SSM_KEY}" --region ${region} --output json | jq -r '.[].Value')`,
-  `export NEXUS_PASSWORD=$(aws ssm get-parameter --name "${NEXUS_PASSWORD_SSM_KEY}" --with-decryption --region ${region} --output json | jq -r '.[].Value')`,
-  `echo \" ${getMvnSettingsTemplate()}\" > ~/.m2/settings.tmpl.xml`,
-  `envsubst < ~/.m2/settings.tmpl.xml > ~/.m2/settings.xml`,
-];
-
-const installGithubCLI = (): string[] => [
-  `echo \"Installing Github CLI v${GH_VERSION} in $PWD/bin\"`,
-  `mkdir -p bin`,
-  `curl -LO https://github.com/cli/cli/releases/download/v${GH_VERSION}/gh_${GH_VERSION}_linux_amd64.tar.gz`,
-  `tar -xzf gh_${GH_VERSION}_linux_amd64.tar.gz`,
-  `mv gh_${GH_VERSION}_linux_amd64/bin/gh bin/`
-];
-
-const installKubectl = (): string[] => [
-  `echo \"Installing Kubectl v${KUBECTL_VERSION} in $PWD/bin\"`,
-  `mkdir -p bin`,
-  `curl -L https://storage.googleapis.com/kubernetes-release/release/v${KUBECTL_VERSION}/bin/linux/amd64/kubectl -o bin/kubectl`,
-  `chmod +x bin/kubectl`
-];
-
-const installYq = (): string[] => [
-  `echo \"Installing Yq v${YQ_VERSION} in $PWD/bin\"`,
-  `mkdir -p bin`,
-  `curl -L https://github.com/mikefarah/yq/releases/download/v${YQ_VERSION}/yq_linux_amd64 -o bin/yq`,
-  'chmod +x bin/yq',
-  'chmod +x bin/yq --version',
-]
 
 const getMvnSettingsTemplate = (): string => {
 return `
@@ -124,3 +132,4 @@ return `
 </settings>
 `
 };
+

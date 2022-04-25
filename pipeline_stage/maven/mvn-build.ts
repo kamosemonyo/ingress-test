@@ -4,11 +4,11 @@ import { CodeBuildAction } from "aws-cdk-lib/aws-codepipeline-actions";
 import { BuildEnvironmentVariableType, BuildSpec, PipelineProject, Project } from 'aws-cdk-lib/aws-codebuild';
 import { Artifact } from 'aws-cdk-lib/aws-codepipeline';
 
-import { toValidConstructName } from '../lib/util';
-import { CommonCommands } from '../lib/commands';
+import { toValidConstructName } from '../../lib/util';
+import { CommonCommands } from '../../lib/commands';
 
-import * as consts from '../lib/constants';
-import { MoneyRoleBuilder } from './money-role-builder';
+import * as consts from '../../lib/constants';
+import { MoneyRoleBuilder } from '../money-role-builder';
 import { aws_s3 } from 'aws-cdk-lib';
 import { Effect, IPrincipal, IRole, PolicyStatement } from 'aws-cdk-lib/aws-iam';
 
@@ -279,7 +279,11 @@ const createMavenReleaseProject = (scope: Construct, params: releaseParams): Pip
         }
       },
       phases: {
-        install: {},
+        install: {
+          commands: [
+            ... CommonCommands.installYq()
+          ]
+        },
         build: {
           commands: [
             'env',
@@ -298,18 +302,23 @@ const createMavenReleaseProject = (scope: Construct, params: releaseParams): Pip
             'echo resolved version $VERSION',
             `mvn -f ${params.pomFilePath} build-helper:parse-version versions:set -DnewVersion=$VERSION versions:commit`,
             'git status',
-            'git config user.email \"cesadmins@mmiholdings.co.za\"',
-            'git config user.name \"multiply-service\"',
-            'git add *pom.xml **/pom.xml',
-            `git commit -m "Version update for Release v$VERSION"`,
-            `git tag -a "$VERSION" -m "Publish tag for version v$VERSION"`,
-            `git tag -a "$LIVE_DATE_TAG" -m "Publish tag for production deployment tracking $LIVE_DATE_TAG"`,
-            `git push https://$GITHUB_AUTH_TOKEN@github.com/${params.githubOrgName}/${params.repositoryName}.git --all`,
-            `git push https://$GITHUB_AUTH_TOKEN@github.com/${params.githubOrgName}/${params.repositoryName}.git --tags`,
+            // 'git config user.email \"cesadmins@mmiholdings.co.za\"',
+            // 'git config user.name \"multiply-service\"',
+            // 'git add *pom.xml **/pom.xml',
+            // `git commit -m "Version update for Release v$VERSION"`,
+            // `git tag -a "$VERSION" -m "Publish tag for version v$VERSION"`,
+            // `git tag -a "$LIVE_DATE_TAG" -m "Publish tag for production deployment tracking $LIVE_DATE_TAG"`,
+            // `git push https://$GITHUB_AUTH_TOKEN@github.com/${params.githubOrgName}/${params.repositoryName}.git --all`,
+            // `git push https://$GITHUB_AUTH_TOKEN@github.com/${params.githubOrgName}/${params.repositoryName}.git --tags`,
             `aws ecr get-login-password --region ${consts.ECR_REGION} | docker login --username AWS --password-stdin ${params.account}.dkr.ecr.${consts.ECR_REGION}.amazonaws.com`,
             `docker pull ${params.account}.dkr.ecr.${consts.ECR_REGION}.amazonaws.com/${params.repositoryName}:$VERSION-SNAPSHOT`,
             `docker tag ${params.account}.dkr.ecr.${consts.ECR_REGION}.amazonaws.com/${params.repositoryName}:$VERSION-SNAPSHOT ${params.account}.dkr.ecr.${consts.ECR_REGION}.amazonaws.com/${params.repositoryName}:$VERSION`,
             `docker push ${params.account}.dkr.ecr.${consts.ECR_REGION}.amazonaws.com/${params.repositoryName}:$VERSION`,
+          ]
+        },
+        post_build: {
+          commands: [
+            ... CommonCommands.updateCluster(params.repositoryName, params.environment, params.githubOrgName)
           ]
         }
       },

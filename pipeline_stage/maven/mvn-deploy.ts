@@ -2,10 +2,10 @@ import { Construct } from 'constructs';
 import { CodeBuildAction } from "aws-cdk-lib/aws-codepipeline-actions";
 import { BuildSpec, PipelineProject } from 'aws-cdk-lib/aws-codebuild';
 import { Artifact } from 'aws-cdk-lib/aws-codepipeline';
-import { toValidConstructName } from '../lib/util';
-import { codeBuildSpecVersion, defaultCodeBuildEnvironment, mainGitBranch, nexusRepository } from '../lib/constants';
+import { toValidConstructName } from '../../lib/util';
+import { codeBuildSpecVersion, defaultCodeBuildEnvironment, mainGitBranch, nexusRepository } from '../../lib/constants';
 import { IVpc } from 'aws-cdk-lib/aws-ec2';
-import { CommonCommands } from '../lib/commands';
+import { CommonCommands } from '../../lib/commands';
 import { IPrincipal } from 'aws-cdk-lib/aws-iam';
 
 interface parameters {

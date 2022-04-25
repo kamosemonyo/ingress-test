@@ -29,5 +29,6 @@ export const EKS_NON_PROD_CLUSTER_NAME = 'non-prod';
 
 export const ENVIRONMENT_DEV = 'dev';
 
-export const PRE_ENV = 'pre'
-export const PROD_ENV = 'prod'
+export const ENV_PRE = 'pre'
+export const ENV_PROD = 'prod'
+export const ENV_DEV = 'dev'

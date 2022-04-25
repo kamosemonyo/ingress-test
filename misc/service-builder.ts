@@ -1,22 +1,22 @@
 import { readFileSync, PathLike } from 'fs';
 import { load } from 'js-yaml';
-import { PRE_ENV, PROD_ENV } from '../lib/constants';
+import { ENV_PRE, ENV_PROD } from '../lib/constants';
 import { JavaService, Service } from './service';
 
 export class ServiceBuilder {
   private static filepath:PathLike = './misc/projects.yml';
 
-  static buildJavaServices (env:string = PRE_ENV):Service[] {
+  static buildJavaServices (env:string = ENV_PRE):Service[] {
     return this.buildService('maven', env, this.buildJavaService);
   }
 
-  static buildDockerServices (env:string = PRE_ENV):Service [] {
+  static buildDockerServices (env:string = ENV_PRE):Service [] {
     return this.buildService('docker', env, this.buildDockerService)
   }
 
   static buildService(template:string, env:string, builderServiceFunction:Function) {
-    if (env !== PRE_ENV && env !== PROD_ENV) {
-      env = PRE_ENV
+    if (env !== ENV_PRE && env !== ENV_PROD) {
+      env = ENV_PRE
     }
 
     const config:any = this.readConfig()
@@ -57,7 +57,7 @@ export class ServiceBuilder {
   }
 
   static getReplicas (env:string, service:any) {
-    return (env == PRE_ENV) ? service.replicas.pre : service.replicas.prod;
+    return (env == ENV_PRE) ? service.replicas.pre : service.replicas.prod;
   }
 
   static readConfig () {

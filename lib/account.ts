@@ -1,12 +1,12 @@
-import { PRE_ENV, PROD_ENV } from "./constants";
+import { ENV_PRE, ENV_PROD } from "./constants";
 
 export class Account {
-  static forPipeline (env:string = PRE_ENV) {
-    if (env !== PRE_ENV && env !== PROD_ENV) {
+  static forPipeline (env:string = ENV_PRE) {
+    if (env !== ENV_PRE && env !== ENV_PROD) {
       env = 'pre';
     }
 
-    if (env == PROD_ENV) {
+    if (env == ENV_PROD) {
       return {
         region: 'eu-west-1',
         account: '737245153745',
@@ -19,12 +19,12 @@ export class Account {
     };
   }
 
-  static forCluster (env:string = PRE_ENV) {
-    if (env !== PRE_ENV && env !== PROD_ENV) {
+  static forCluster (env:string = ENV_PRE) {
+    if (env !== ENV_PRE && env !== ENV_PROD) {
       env = 'pre';
     }
 
-    if (env == PROD_ENV) {
+    if (env == ENV_PROD) {
       return {
         region: 'af-south-1',
         account: '737245153745',

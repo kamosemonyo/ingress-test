@@ -1,7 +1,7 @@
 import { Template } from '@aws-cdk/assertions-alpha';
 import { App } from 'aws-cdk-lib';
 
-import { MavenServicePipeline } from '../templates/maven-service-pipeline';
+import { MavenPipelineStack } from '../pipeline/maven-pipeline';
 
 import '@aws-cdk/assert/jest';
 
@@ -14,7 +14,7 @@ const artifactsBucket = 'pipeline-artifacts';
 
 test('Stack Snapshot', () => {
   const app = new App({ context: { repositoryName, propertiesFile, replicas }});
-  const stack = new MavenServicePipeline(app, toValidConstructName(repositoryName), {
+  const stack = new MavenPipelineStack(app, toValidConstructName(repositoryName), {
     repositoryName,
     propertiesFile,
     replicas,
@@ -31,7 +31,7 @@ test('Stack Snapshot', () => {
 test('Throw error without repository context', () => {
   const synth = () => {
     const app = new App();
-    const stack = new MavenServicePipeline(app, toValidConstructName(repositoryName), {
+    const stack = new MavenPipelineStack(app, toValidConstructName(repositoryName), {
       repositoryName,
       propertiesFile,
       replicas,
@@ -48,7 +48,7 @@ test('Throw error without repository context', () => {
 
 test('Creates all required resources', () => {
   const app = new App({ context: { repositoryName, propertiesFile, replicas }});
-  const stack = new MavenServicePipeline(app, toValidConstructName(repositoryName), {
+  const stack = new MavenPipelineStack(app, toValidConstructName(repositoryName), {
     repositoryName,
     propertiesFile,
     replicas,
@@ -121,7 +121,7 @@ test('Builds pipeline correctly', () => {
   process.env.SOURCE_BRANCH = 'develop';
 
   const app = new App({ context: { repositoryName, propertiesFile, replicas }});
-  const stack = new MavenServicePipeline(app, toValidConstructName(repositoryName), {
+  const stack = new MavenPipelineStack(app, toValidConstructName(repositoryName), {
     repositoryName,
     propertiesFile,
     replicas,
