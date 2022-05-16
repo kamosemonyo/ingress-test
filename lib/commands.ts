@@ -2,7 +2,8 @@ import { nexusRepository, NEXUS_PASSWORD_SSM_KEY, NEXUS_USERNAME_SSM_KEY } from 
 
 const GH_VERSION = '2.4.0';
 const KUBECTL_VERSION = '1.15.0';
-const YQ_VERSION = '4.17.2';
+const YQ_VERSION = 'v4.25.1';
+const YQ_BINARY = 'yq_linux_amd64'
 const CLUSTER_REPO = 'aws-eks';
 const CLUSTER_YML_CONFIG_PATH = 'cluster/services.yml';
 
@@ -50,22 +51,28 @@ export class CommonCommands {
   ];
 
   static installYq = ():string[] => [
-    `echo \"Installing Yq v${YQ_VERSION} in $PWD/bin\"`,
-    `mkdir -p bin`,
-    `curl -L https://github.com/mikefarah/yq/releases/download/v${YQ_VERSION}/yq_linux_amd64 -o bin/yq`,
-    'chmod +x bin/yq',
-    'chmod +x bin/yq --version',
+    `echo "Installing Yq v${YQ_VERSION}"`,
+    'sudo apt update',
+    `wget https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/${YQ_BINARY} -O /usr/bin/yq`,
+    `chmod +x /usr/bin/yq`,
+    'yq --version',
+    'yq --help'
   ];
 
   static updateCluster = (repo:string , env:string, githubOrg:string):string[] => [
     `git clone https://$GITHUB_AUTH_TOKEN@github.com/${githubOrg}/${CLUSTER_REPO}.git .crepo`,
     `cd .crepo`,
-    `git switch -c ${env}`,
-    `bin/yq -i '.services.[] | select(.repo == "${repo}").version = $VERSION' ${CLUSTER_REPO}/${CLUSTER_YML_CONFIG_PATH}`,
-    `git commit -m "update ${repo} to version $VERSION"`,
+    'git config user.email \"cesadmins@mmiholdings.co.za\"',
+    'git config user.name \"multiply-service\"',
+    'git fetch',
+    `git switch ${env}`,
+    'git pull',
+    `VERSION=$VERSION yq -i '.services.[] |= select(.repo == "${repo}").version= env(VERSION)' ${CLUSTER_YML_CONFIG_PATH}`,
+    `git commit -am "update ${repo} to version $VERSION"`,
     `git tag -a ${repo}-$VERSION -m "update ${repo} to version $VERSION" `,
     'git push',
-    `rm -rf ${CLUSTER_REPO}`
+    'git push origin --tags',
+    'rm -rf .crepo'
   ]
 };
 

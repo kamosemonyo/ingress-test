@@ -24,6 +24,7 @@ interface parameters {
   outputArtifact: Artifact
   environment: string
   pipelineRole: IPrincipal
+  githubOrgName: string
 };
 
 export const createMavenDockerBuildAction = (scope: Construct, params: parameters): CodeBuildAction => {
@@ -50,10 +51,10 @@ const createMavenDockerBuildProject = (scope: Construct, params: parameters): Pi
   const stageName = `${toValidConstructName(params.repositoryName)}MavenDockerCodeBuildProject`;
   const buildProject = new PipelineProject(scope, stageName, {
     role: role,
+    vpc: params.vpc,
     projectName: projectName,
     buildSpec: buildMavenDockerBuildSpec(params),
     environment: consts.defaultCodeBuildEnvironment,
-    vpc: params.vpc,
     subnetSelection: {
       onePerAz: true,
     },
@@ -65,12 +66,16 @@ const createMavenDockerBuildProject = (scope: Construct, params: parameters): Pi
 const buildMavenDockerBuildSpec = (params: parameters): BuildSpec => {
   const buildSpec = BuildSpec.fromObject({
     version: consts.codeBuildSpecVersion,
+    env: {
+      'secrets-manager': {
+        GITHUB_AUTH_TOKEN: consts.GITHUB_TOKEN_SECRET_NAME
+      }
+    },
     phases: {
       install: {
         'runtime-versions': {
-          java: 'openjdk8',
-          docker: 18,
-        },
+          java: 'corretto8'
+        }
       },
       pre_build: {
         commands: [
@@ -89,8 +94,10 @@ const buildMavenDockerBuildSpec = (params: parameters): BuildSpec => {
       build: {
         commands: [
           'mvn clean install',
-          `export VERSION=\`grep -oP \'version=\\K.*\' ${params.propertiesFilePath}\``,
-          `echo "Resolved new version $VERSION"`,
+          `export SNAPSHOT_VERSION=\`grep -oP \'version=\\K.*\' ${params.propertiesFilePath}\``,
+          `echo "current new snapshot version $SNAPSHOT_VERSION"`,
+          'export VERSION=$(echo ${SNAPSHOT_VERSION} |awk -F "-" \'{print $1}\')',
+          'echo "Resolved new version $VERSION"',
           'echo $VERSION > VERSION',
           `cp ${params.propertiesFilePath} docker/files`,
           // Deploy Maven artifacts for version
@@ -101,8 +108,8 @@ const buildMavenDockerBuildSpec = (params: parameters): BuildSpec => {
         commands: [
           // Build and push docker image for version snapshot
           `aws ecr get-login-password --region ${consts.ECR_REGION} | docker login --username AWS --password-stdin ${params.account}.dkr.ecr.${consts.ECR_REGION}.amazonaws.com`,
-          `docker build -t ${params.account}.dkr.ecr.${consts.ECR_REGION}.amazonaws.com/${params.repositoryName}:$VERSION-SNAPSHOT .`,
-          `docker push ${params.account}.dkr.ecr.${consts.ECR_REGION}.amazonaws.com/${params.repositoryName}:$VERSION-SNAPSHOT`,
+          `docker build -t ${params.account}.dkr.ecr.${consts.ECR_REGION}.amazonaws.com/${params.repositoryName}:$SNAPSHOT_VERSION -t ${params.account}.dkr.ecr.${consts.ECR_REGION}.amazonaws.com/${params.repositoryName}:$VERSION .`,
+          `docker push --all-tags ${params.account}.dkr.ecr.${consts.ECR_REGION}.amazonaws.com/${params.repositoryName}`,
         ]
       }
     },
@@ -187,6 +194,8 @@ const buildMavenDeployBuildSpec = (params: deployJobParams): BuildSpec => {
       },
       build: {
         commands: [
+          "SERVICE=$(git tag -l |sed 1q  |ggrep -o '.*-' |sed 's/.$//')",
+          "VERSION=$(git tag -l |sed 1q  |rev |cut -d '-' -f 1 |rev)",
           'export VERSION=$(cat $CODEBUILD_SRC_DIR_Artifact_Build_Docker_Build/VERSION)',
           'echo resolved version $VERSION',
           'mkdir -p .k8s',
@@ -286,22 +295,22 @@ const createMavenReleaseProject = (scope: Construct, params: releaseParams): Pip
         },
         build: {
           commands: [
-            'env',
-            'ls -al',
-            `git clone https://$GITHUB_AUTH_TOKEN@github.com/${params.githubOrgName}/${params.repositoryName}.git .repo`,
-            'cd .repo',
-            'git fetch --tags',
-            `git checkout ${params.branch}`,
-            `git reset --hard "$CODEBUILD_RESOLVED_SOURCE_VERSION"`,
-            'cd ..',
-            'mv .repo/.git .',
-            'rm -rf .repo',
-            'git status',
-            'export VERSION=$(cat $CODEBUILD_SRC_DIR_Artifact_Build_Docker_Build/VERSION)',
-            'export export LIVE_DATE_TAG=go-live-$(date --iso-8601=date)',
-            'echo resolved version $VERSION',
-            `mvn -f ${params.pomFilePath} build-helper:parse-version versions:set -DnewVersion=$VERSION versions:commit`,
-            'git status',
+            // 'env',
+            // 'ls -al',
+            // `git clone https://$GITHUB_AUTH_TOKEN@github.com/${params.githubOrgName}/${params.repositoryName}.git .repo`,
+            // 'cd .repo',
+            // 'git fetch --tags',
+            // `git checkout ${params.branch}`,
+            // `git reset --hard "$CODEBUILD_RESOLVED_SOURCE_VERSION"`,
+            // 'cd ..',
+            // 'mv .repo/.git .',
+            // 'rm -rf .repo',
+            // 'git status',
+            // 'export VERSION=$(cat $CODEBUILD_SRC_DIR_Artifact_Build_Docker_Build/VERSION)',
+            // 'export export LIVE_DATE_TAG=go-live-$(date --iso-8601=date)',
+            // 'echo resolved version $VERSION',
+            // `mvn -f ${params.pomFilePath} build-helper:parse-version versions:set -DnewVersion=$VERSION versions:commit`,
+            // 'git status',
             // 'git config user.email \"cesadmins@mmiholdings.co.za\"',
             // 'git config user.name \"multiply-service\"',
             // 'git add *pom.xml **/pom.xml',
@@ -310,15 +319,14 @@ const createMavenReleaseProject = (scope: Construct, params: releaseParams): Pip
             // `git tag -a "$LIVE_DATE_TAG" -m "Publish tag for production deployment tracking $LIVE_DATE_TAG"`,
             // `git push https://$GITHUB_AUTH_TOKEN@github.com/${params.githubOrgName}/${params.repositoryName}.git --all`,
             // `git push https://$GITHUB_AUTH_TOKEN@github.com/${params.githubOrgName}/${params.repositoryName}.git --tags`,
-            `aws ecr get-login-password --region ${consts.ECR_REGION} | docker login --username AWS --password-stdin ${params.account}.dkr.ecr.${consts.ECR_REGION}.amazonaws.com`,
-            `docker pull ${params.account}.dkr.ecr.${consts.ECR_REGION}.amazonaws.com/${params.repositoryName}:$VERSION-SNAPSHOT`,
-            `docker tag ${params.account}.dkr.ecr.${consts.ECR_REGION}.amazonaws.com/${params.repositoryName}:$VERSION-SNAPSHOT ${params.account}.dkr.ecr.${consts.ECR_REGION}.amazonaws.com/${params.repositoryName}:$VERSION`,
-            `docker push ${params.account}.dkr.ecr.${consts.ECR_REGION}.amazonaws.com/${params.repositoryName}:$VERSION`,
+            // `aws ecr get-login-password --region ${consts.ECR_REGION} | docker login --username AWS --password-stdin ${params.account}.dkr.ecr.${consts.ECR_REGION}.amazonaws.com`,
+            // `docker pull ${params.account}.dkr.ecr.${consts.ECR_REGION}.amazonaws.com/${params.repositoryName}:$VERSION-SNAPSHOT`,
+            // `docker tag ${params.account}.dkr.ecr.${consts.ECR_REGION}.amazonaws.com/${params.repositoryName}:$VERSION`,
+            // `docker push ${params.account}.dkr.ecr.${consts.ECR_REGION}.amazonaws.com/${params.repositoryName}:$VERSION`,
           ]
         },
         post_build: {
           commands: [
-            ... CommonCommands.updateCluster(params.repositoryName, params.environment, params.githubOrgName)
           ]
         }
       },

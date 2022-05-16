@@ -52,7 +52,7 @@ const buildMavenDeploySpec = (params: parameters): BuildSpec => {
           java: 'corretto8'
         },
         commands: [
-          ...CommonCommands.installJq,
+          ...CommonCommands.installYq(),
         ]
       },
       build: {

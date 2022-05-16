@@ -10,9 +10,11 @@ import { toValidConstructName } from "../lib/util";
 import { CODE_BUILD_VPC_NAME, EKS_NON_PROD_CLUSTER_NAME, ENV_PRE, mainGitBranch } from "../lib/constants";
 import { createMavenDeployAction, createMavenDockerBuildAction, createMavenRelease } from "../pipeline_stage/maven/mvn-build";
 import { Effect, PolicyStatement } from "aws-cdk-lib/aws-iam";
+import { updateClusterProject } from "../pipeline_stage/update-cluster";
 
 interface MavenPipelineProps extends StackProps {
   repositoryName:string,
+  serviceName: string,
   propertiesFile:string,
   replicas: Number
 }
@@ -72,12 +74,6 @@ export class MavenPipelineStack extends Stack {
       throw Error('Expected context [repositoryName] to be defined.');
     }
 
-    const ecrRepository = createEcrRepository(this, { repositoryName });
-
-    this.exportValue(ecrRepository.repositoryName, { name: `${props.repositoryName}-ecr-repository` });
-    this.exportValue(ecrRepository.repositoryArn, { name: `${props.repositoryName}-ecr-repository-arn` });
-    this.exportValue(ecrRepository.repositoryUri, { name: `${props.repositoryName}-ecr-repository-uri` });
-
     const sourceCodeArtifact = new codepipeline.Artifact();
     const buildOutputArtifact = new codepipeline.Artifact();
 
@@ -87,6 +83,12 @@ export class MavenPipelineStack extends Stack {
       pipelineName: `${repositoryName}-${branch}`,
       artifactBucket: artifactsBucket,
     });
+
+    pipeline.role.addToPrincipalPolicy(new PolicyStatement({
+      effect: Effect.ALLOW,
+      actions: ['codebuild:StartBuild'],
+      resources: ['*']
+    }))
 
     pipeline.addStage({
       stageName: 'Source',
@@ -122,27 +124,42 @@ export class MavenPipelineStack extends Stack {
           pomFilePath: pomFile,
           inputArtifact: sourceCodeArtifact,
           outputArtifact: buildOutputArtifact,
-          environment: ENV_PRE
+          environment: ENV_PRE,
+          githubOrgName: githubOrgParam.valueAsString
         }),
       ],
     })
 
     pipeline.addStage({
-      stageName: 'Publish',
+      stageName: 'Update',
       actions: [
-        createMavenRelease(this, {
-          branch,
-          repositoryName,
-          region: Stack.of(this).region,
+        updateClusterProject(this, {
+          input: buildOutputArtifact,
           account: Stack.of(this).account,
-          pomFilePath: pomFile,
-          githubOrgName: githubOrgParam.valueAsString,
-          extraInputs: [ buildOutputArtifact ],
-          inputArtifact: sourceCodeArtifact,
-          environment: ENV_PRE
+          region: Stack.of(this).region,
+          branch: branch,
+          githubOrg: githubOrgParam.valueAsString,
+          repositoryName: repositoryName
         })
-      ],
-    });
+      ]
+    })
+
+    // pipeline.addStage({
+    //   stageName: 'Publish',
+    //   actions: [
+    //     createMavenRelease(this, {
+    //       branch,
+    //       repositoryName,
+    //       region: Stack.of(this).region,
+    //       account: Stack.of(this).account,
+    //       pomFilePath: pomFile,
+    //       githubOrgName: githubOrgParam.valueAsString,
+    //       extraInputs: [ buildOutputArtifact ],
+    //       inputArtifact: sourceCodeArtifact,
+    //       environment: ENV_PRE
+    //     })
+    //   ],
+    // });
 
 
   };

@@ -6,6 +6,15 @@ import { JavaService, Service } from './service';
 export class ServiceBuilder {
   private static filepath:PathLike = './misc/projects.yml';
 
+  static buildServices (env:string = ENV_PRE):Service[] {
+    const services:Service[] = [
+      ...this.buildJavaServices(env)
+    // services.concat(this.buildDockerServices(env))
+    ]
+    
+    return services;
+  }
+
   static buildJavaServices (env:string = ENV_PRE):Service[] {
     return this.buildService('maven', env, this.buildJavaService);
   }

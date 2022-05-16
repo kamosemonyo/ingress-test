@@ -34,7 +34,8 @@ export class MoneyRoleBuilder {
         effect: Effect.ALLOW,
         actions: [
           'codebuild:StartBuild',
-          'ecr:GetAuthorizationToken'
+          'ecr:GetAuthorizationToken',
+          'secretsmanager:GetSecretValue'
         ],
         resources: ['*']
       }));
@@ -175,4 +176,36 @@ export class MoneyRoleBuilder {
 
       return role;
     }
-}
+
+    static buildUpdateRole(scope:Construct, repositoryName:string, account:string, region: string): IRole {
+      const roleName = `update-cluster-${repositoryName.toLocaleLowerCase()}`;
+      const role = new Role(scope, roleName, {
+        roleName: roleName,
+        assumedBy: new CompositePrincipal(
+          new ServicePrincipal('codebuild.amazonaws.com'),
+          new ServicePrincipal('codepipeline.amazonaws.com')
+        ),
+      });
+
+      role.addToPrincipalPolicy(new PolicyStatement({
+        effect: Effect.ALLOW,
+        actions: [ 'codebuild:StartBuild' ],
+        resources: [ `arn:aws:codebuild:${ECR_REGION}:${account}:project/*` ]
+      }));
+
+      role.addToPrincipalPolicy(new PolicyStatement({
+        effect: Effect.ALLOW,
+        actions: [
+          'secretsmanager:GetResourcePolicy',
+          'secretsmanager:GetSecretValue',
+          'secretsmanager:DescribeSecret',
+          'secretsmanager:ListSecretVersionIds',
+          ],
+        resources: [
+          `arn:aws:secretsmanager:${region ?? '*'}:${account ?? '*'}:secret:${GITHUB_TOKEN_SECRET_NAME}-*`,
+        ]
+      }))
+
+      return role;
+    }
+} 

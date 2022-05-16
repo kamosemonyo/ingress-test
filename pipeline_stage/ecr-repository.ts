@@ -4,7 +4,8 @@ import { aws_ecr as ecr } from 'aws-cdk-lib';
 import { toValidConstructName } from '../lib/util';
 
 interface parameters {
-  repositoryName: string
+  repositoryName: string,
+  serviceName: string
 };
 
 export const createEcrRepository = (scope: Construct, props: parameters): ecr.Repository => {

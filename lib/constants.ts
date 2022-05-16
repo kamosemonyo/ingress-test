@@ -8,9 +8,9 @@ export const codeBuildSpecVersion = '0.2';
 export const nexusRepository = 'http://nexus-ces.mmih.biz';
 
 export const defaultCodeBuildEnvironment:BuildEnvironment = {
-    buildImage: LinuxBuildImage.STANDARD_3_0,
+    buildImage: LinuxBuildImage.STANDARD_5_0,
     computeType: ComputeType.MEDIUM,
-    privileged: true 
+    privileged: true
 };
 
 export const NEXUS_USERNAME_SSM_KEY = '/mmi/nexus/username';
@@ -20,6 +20,7 @@ export const K8S_TEMPLATES_BUCKET_NAME = 'momentum-money-k8s-templates';
 export const CODE_BUILD_VPC_NAME = 'mmtnonprdVPC';
 export const GITHUB_TOKEN_SECRET_NAME = 'github-mmi-holdings-ces-token';
 export const GITHUB_HOST = 'github.com';
+export const GITHUB_ORG = 'mmi-holdings-ces'
 
 export const CODE_BUILD_BUILD_ROLE = 'code-build-money-build-role';
 export const CODE_BUILD_RELEASE_ROLE = 'code-build-money-release-role';
@@ -29,6 +30,6 @@ export const EKS_NON_PROD_CLUSTER_NAME = 'non-prod';
 
 export const ENVIRONMENT_DEV = 'dev';
 
-export const ENV_PRE = 'pre'
+export const ENV_PRE = 'preprod'
 export const ENV_PROD = 'prod'
 export const ENV_DEV = 'dev'
