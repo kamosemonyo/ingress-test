@@ -1,4 +1,4 @@
-import { nexusRepository, NEXUS_PASSWORD_SSM_KEY, NEXUS_USERNAME_SSM_KEY } from "./constants";
+import { NEXUS_REPOSITORY, NEXUS_PASSWORD_SSM_KEY, NEXUS_USERNAME_SSM_KEY } from "./constants";
 
 const GH_VERSION = '2.4.0';
 const KUBECTL_VERSION = '1.15.0';
@@ -16,7 +16,6 @@ export class CommonCommands {
 
   static installJq: string[] = [
     'echo "Installing Jq"',
-    'apt-get update',
     'apt install jq',
     'apt install gettext',
   ];
@@ -28,7 +27,7 @@ export class CommonCommands {
 
   static setupMvnSettings = (region: string):string[] => [
     `mkdir -p ~/.m2`,
-    `export NEXUS_REPOSITORY=${nexusRepository}`,
+    `export NEXUS_REPOSITORY=${NEXUS_REPOSITORY}`,
     `export NEXUS_USERNAME=$(aws ssm get-parameter --name "${NEXUS_USERNAME_SSM_KEY}" --region ${region} --output json | jq -r '.[].Value')`,
     `export NEXUS_PASSWORD=$(aws ssm get-parameter --name "${NEXUS_PASSWORD_SSM_KEY}" --with-decryption --region ${region} --output json | jq -r '.[].Value')`,
     `echo \" ${getMvnSettingsTemplate()}\" > ~/.m2/settings.tmpl.xml`,
@@ -69,11 +68,21 @@ export class CommonCommands {
     'git pull',
     `VERSION=$VERSION yq -i '.services.[] |= select(.repo == "${repo}").version= env(VERSION)' ${CLUSTER_YML_CONFIG_PATH}`,
     `git commit -am "update ${repo} to version $VERSION"`,
-    `git tag -a ${repo}-$VERSION -m "update ${repo} to version $VERSION" `,
+    `git tag -a ${repo}-$VERSION@${env} -m "update ${repo} to version $VERSION" `,
     'git push',
     'git push origin --tags',
     'rm -rf .crepo'
   ]
+
+  static assumeAwsRole = (roleArn:string):string[] => {
+    return [
+      `OUT=$(aws sts assume-role --role-arn ${roleArn} --role-session-name AWSCLI-Session)`,
+      "export AWS_ACCESS_KEY_ID=$(echo $OUT | jq -r '.Credentials''.AccessKeyId')",
+      "export AWS_SECRET_ACCESS_KEY=$(echo $OUT | jq -r '.Credentials''.SecretAccessKey')",
+      "export AWS_SESSION_TOKEN=$(echo $OUT | jq -r '.Credentials''.SessionToken')",
+      'aws sts get-caller-identity',
+    ]
+  }
 };
 
 const getMvnSettingsTemplate = (): string => {

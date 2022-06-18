@@ -1,7 +1,8 @@
 import { Construct } from 'constructs';
-import { RemovalPolicy, Stack, StackProps } from 'aws-cdk-lib';
+import { RemovalPolicy, Stack, StackProps, Tag } from 'aws-cdk-lib';
 import { aws_ecr as ecr } from 'aws-cdk-lib';
 import { toValidConstructName } from '../lib/util';
+import { MoneyTags } from '../tags/tags';
 
 interface parameters {
   repositoryName: string,

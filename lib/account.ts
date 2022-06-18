@@ -1,6 +1,8 @@
-import { ENV_PRE, ENV_PROD } from "./constants";
+import { ACCOUNT_PRE, ACCOUNT_PROD, ECR_REGION, EKS_REGION, ENV_PRE, ENV_PROD, PIPELINE_REGION } from "./constants";
 
 export class Account {
+  
+
   static forPipeline (env:string = ENV_PRE) {
     if (env !== ENV_PRE && env !== ENV_PROD) {
       env = 'pre';
@@ -8,14 +10,14 @@ export class Account {
 
     if (env == ENV_PROD) {
       return {
-        region: 'eu-west-1',
-        account: '737245153745',
+        region: PIPELINE_REGION,
+        account: ACCOUNT_PROD,
       };
     }
 
     return {
-      region: 'eu-west-1',
-      account: '737245153745',
+      region: PIPELINE_REGION,
+      account: ACCOUNT_PRE,
     };
   }
 
@@ -26,14 +28,32 @@ export class Account {
 
     if (env == ENV_PROD) {
       return {
-        region: 'af-south-1',
-        account: '737245153745',
+        region: EKS_REGION,
+        account: ACCOUNT_PROD,
       };
     }
 
     return {
-      region: 'af-south-1',
-      account: '737245153745',
+      region: EKS_REGION,
+      account: ACCOUNT_PRE,
+    };
+  }
+
+  static forImages (env:string = ENV_PRE) {
+    if (env !== ENV_PRE && env !== ENV_PROD) {
+      env = 'pre';
+    }
+
+    if (env == ENV_PROD) {
+      return {
+        region: ECR_REGION,
+        account: ACCOUNT_PROD,
+      };
+    }
+
+    return {
+      region: ECR_REGION,
+      account: ACCOUNT_PRE,
     };
   }
 }

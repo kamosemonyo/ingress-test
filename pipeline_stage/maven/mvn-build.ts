@@ -1,7 +1,7 @@
 import { Construct } from 'constructs';
 import { IVpc } from 'aws-cdk-lib/aws-ec2';
-import { CodeBuildAction } from "aws-cdk-lib/aws-codepipeline-actions";
-import { BuildEnvironmentVariableType, BuildSpec, PipelineProject, Project } from 'aws-cdk-lib/aws-codebuild';
+import { CodeBuildAction, CodeBuildActionProps } from "aws-cdk-lib/aws-codepipeline-actions";
+import { BuildSpec, PipelineProject } from 'aws-cdk-lib/aws-codebuild';
 import { Artifact } from 'aws-cdk-lib/aws-codepipeline';
 
 import { toValidConstructName } from '../../lib/util';
@@ -10,9 +10,9 @@ import { CommonCommands } from '../../lib/commands';
 import * as consts from '../../lib/constants';
 import { MoneyRoleBuilder } from '../money-role-builder';
 import { aws_s3 } from 'aws-cdk-lib';
-import { Effect, IPrincipal, IRole, PolicyStatement } from 'aws-cdk-lib/aws-iam';
+import { MoneyTags, MoneyTagType } from '../../tags/tags';
 
-interface parameters {
+interface MavenDockerBuildProps {
   vpc: IVpc
   branch: string
   repositoryName: string
@@ -23,23 +23,26 @@ interface parameters {
   inputArtifact: Artifact
   outputArtifact: Artifact
   environment: string
-  pipelineRole: IPrincipal
   githubOrgName: string
 };
 
-export const createMavenDockerBuildAction = (scope: Construct, params: parameters): CodeBuildAction => {
+export const createMavenDockerBuildAction = (scope: Construct, params: MavenDockerBuildProps): CodeBuildAction => {
   const buildAction = new CodeBuildAction({
-    actionName: 'Docker_Build',
+    actionName: 'Docker_Maven_Build',
     input: params.inputArtifact,
     outputs: [params.outputArtifact],
     project: createMavenDockerBuildProject(scope, params),
   });
 
+  MoneyTags.addTag(MoneyTagType.PIPELINE_RESOURCE, buildAction);
+  MoneyTags.addTag(MoneyTagType.BUILD_RESOURCE, buildAction);
+  MoneyTags.addTag(MoneyTagType.JAVA_SERVICE, buildAction);
+
   return buildAction;
 };
 
-const createMavenDockerBuildProject = (scope: Construct, params: parameters): PipelineProject => {
-  const projectName = `${params.repositoryName}-${params.branch}-build`;
+const createMavenDockerBuildProject = (scope: Construct, params: MavenDockerBuildProps): PipelineProject => {
+  const projectName = `${params.repositoryName}-${params.branch}-build-stage`;
   const role = MoneyRoleBuilder.buildCodeBuildRole(
     scope,
     params.environment,
@@ -48,13 +51,13 @@ const createMavenDockerBuildProject = (scope: Construct, params: parameters): Pi
     params.region
   );
 
-  const stageName = `${toValidConstructName(params.repositoryName)}MavenDockerCodeBuildProject`;
+  const stageName = `${toValidConstructName(params.repositoryName)}MavenDockerCodeBuildProjectStage`;
   const buildProject = new PipelineProject(scope, stageName, {
     role: role,
     vpc: params.vpc,
     projectName: projectName,
     buildSpec: buildMavenDockerBuildSpec(params),
-    environment: consts.defaultCodeBuildEnvironment,
+    environment: consts.DEFAULT_CODE_BUILD_ENVIRONMENT,
     subnetSelection: {
       onePerAz: true,
     },
@@ -63,9 +66,9 @@ const createMavenDockerBuildProject = (scope: Construct, params: parameters): Pi
   return buildProject;
 }
 
-const buildMavenDockerBuildSpec = (params: parameters): BuildSpec => {
+const buildMavenDockerBuildSpec = (params: MavenDockerBuildProps): BuildSpec => {
   const buildSpec = BuildSpec.fromObject({
-    version: consts.codeBuildSpecVersion,
+    version: consts.CODE_BUILD_SPEC_VERSION,
     env: {
       'secrets-manager': {
         GITHUB_AUTH_TOKEN: consts.GITHUB_TOKEN_SECRET_NAME
@@ -138,8 +141,7 @@ interface deployJobParams {
   clusterName: string
   inputArtifact: Artifact
   extraInputs: Artifact[]
-  outputs?: Artifact[],
-  pipelineRole: IRole
+  outputs?: Artifact[]
 }
 
 export const createMavenDeployAction = (scope: Construct, params: deployJobParams): CodeBuildAction => {
@@ -162,7 +164,7 @@ const createMavenDeployBuildProject = (scope: Construct, params: deployJobParams
     projectName: projectName,
     vpc: params.vpc,
     buildSpec: buildMavenDeployBuildSpec(params),
-    environment: consts.defaultCodeBuildEnvironment,
+    environment: consts.DEFAULT_CODE_BUILD_ENVIRONMENT,
     subnetSelection: {
       onePerAz: true,
     },
@@ -182,9 +184,11 @@ const createMavenDeployBuildProject = (scope: Construct, params: deployJobParams
 
 const buildMavenDeployBuildSpec = (params: deployJobParams): BuildSpec => {
   const snapshotAppend = params.environment.toLowerCase() === consts.ENVIRONMENT_DEV;
+  const appSelector = params.repositoryName;
+  const instanceSelector = params.repositoryName;
 
   const buildSpec = BuildSpec.fromObject({
-    version: consts.codeBuildSpecVersion,
+    version: consts.CODE_BUILD_SPEC_VERSION,
     phases: {
       install: {
         commands: [
@@ -276,12 +280,12 @@ const createMavenReleaseProject = (scope: Construct, params: releaseParams): Pip
   const buildProject = new PipelineProject(scope, stageName, {
     role,
     projectName,
-    environment: consts.defaultCodeBuildEnvironment,
+    environment: consts.DEFAULT_CODE_BUILD_ENVIRONMENT,
     subnetSelection: {
       onePerAz: true,
     },
     buildSpec: BuildSpec.fromObject({
-      version: consts.codeBuildSpecVersion,
+      version: consts.CODE_BUILD_SPEC_VERSION,
       env: {
         'secrets-manager': {
           GITHUB_AUTH_TOKEN: consts.GITHUB_TOKEN_SECRET_NAME

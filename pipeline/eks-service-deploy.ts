@@ -3,7 +3,7 @@ import * as cdk8s from 'cdk8s';
 import { CfnParameter, Stack, StackProps } from 'aws-cdk-lib';
 
 import { ImagePullPolicy } from 'cdk8s-plus-17';
-import { multiplyMoneyK8sSecret, validEnvironmentNames, } from '../lib/constants';
+import { MONEY_K8S_SECRETS, VALID_ENVIRONMENTS, } from '../lib/constants';
 import { FargateCluster } from 'aws-cdk-lib/aws-eks';
 
 import { Container,
@@ -52,7 +52,7 @@ export class EcsServiceDeploy extends Stack {
       type: 'String',
       description: 'Deployment environment, must correspond to K8s namespace',
       default: process.env.MMD_ENVIRONMENT ?? '',
-      allowedValues: validEnvironmentNames,
+      allowedValues: VALID_ENVIRONMENTS,
     });
 
     const actionParam = new CfnParameter(this, 'action', {
@@ -417,7 +417,7 @@ const defaultContainerEnv = (project: string, environment: string, tag: string):
     name: 'oauth_sharedsecret',
     valueFrom: {
       secretKeyRef: {
-        name: multiplyMoneyK8sSecret,
+        name: MONEY_K8S_SECRETS,
         key: 'oauth_sharedsecret',
         optional: true,
       },
@@ -427,7 +427,7 @@ const defaultContainerEnv = (project: string, environment: string, tag: string):
     name: 'audit_allowedApplications',
     valueFrom: {
       secretKeyRef: {
-        name: multiplyMoneyK8sSecret,
+        name: MONEY_K8S_SECRETS,
         key: 'audit_allowedApplications',
         optional: true,
       },
@@ -437,7 +437,7 @@ const defaultContainerEnv = (project: string, environment: string, tag: string):
     name: 'audit_signingprivatekeypassword',
     valueFrom: {
       secretKeyRef: {
-        name: multiplyMoneyK8sSecret,
+        name: MONEY_K8S_SECRETS,
         key: 'audit_signingprivatekeypassword',
         optional: true,
       },
@@ -447,7 +447,7 @@ const defaultContainerEnv = (project: string, environment: string, tag: string):
     name: 'audit_signingprivatekeystorepassword',
     valueFrom: {
       secretKeyRef: {
-        name: multiplyMoneyK8sSecret,
+        name: MONEY_K8S_SECRETS,
         key: 'audit_signingprivatekeystorepassword',
         optional: true,
       },
@@ -457,7 +457,7 @@ const defaultContainerEnv = (project: string, environment: string, tag: string):
     name: 'forensics_authorizationstring',
     valueFrom: {
       secretKeyRef: {
-        name: multiplyMoneyK8sSecret,
+        name: MONEY_K8S_SECRETS,
         key: 'forensics_authorizationstring',
         optional: true,
       },
@@ -467,7 +467,7 @@ const defaultContainerEnv = (project: string, environment: string, tag: string):
     name: 'hazelcast_password',
     valueFrom: {
       secretKeyRef: {
-        name: multiplyMoneyK8sSecret,
+        name: MONEY_K8S_SECRETS,
         key: 'hazelcast_password',
         optional: true,
       },
@@ -477,7 +477,7 @@ const defaultContainerEnv = (project: string, environment: string, tag: string):
     name: 'kong_credentials',
     valueFrom: {
       secretKeyRef: {
-        name: multiplyMoneyK8sSecret,
+        name: MONEY_K8S_SECRETS,
         key: 'kong_credentials',
         optional: true,
       },
@@ -487,7 +487,7 @@ const defaultContainerEnv = (project: string, environment: string, tag: string):
     name: 'kong_admin_credentials',
     valueFrom: {
       secretKeyRef: {
-        name: multiplyMoneyK8sSecret,
+        name: MONEY_K8S_SECRETS,
         key: 'kong_admin_credentials',
         optional: true,
       },
@@ -497,7 +497,7 @@ const defaultContainerEnv = (project: string, environment: string, tag: string):
     name: 'momentum_credentials',
     valueFrom: {
       secretKeyRef: {
-        name: multiplyMoneyK8sSecret,
+        name: MONEY_K8S_SECRETS,
         key: 'momentum_credentials',
         optional: true,
       },
@@ -507,7 +507,7 @@ const defaultContainerEnv = (project: string, environment: string, tag: string):
     name: 'momentum_points_feed_password',
     valueFrom: {
       secretKeyRef: {
-        name: multiplyMoneyK8sSecret,
+        name: MONEY_K8S_SECRETS,
         key: 'momentum_points_feed_password',
         optional: true,
       },
@@ -517,7 +517,7 @@ const defaultContainerEnv = (project: string, environment: string, tag: string):
     name: 'momentum_points_feed_username',
     valueFrom: {
       secretKeyRef: {
-        name: multiplyMoneyK8sSecret,
+        name: MONEY_K8S_SECRETS,
         key: 'momentum_points_feed_username',
         optional: true,
       },
@@ -527,7 +527,7 @@ const defaultContainerEnv = (project: string, environment: string, tag: string):
     name: 'retailsts_authorizationstring',
     valueFrom: {
       secretKeyRef: {
-        name: multiplyMoneyK8sSecret,
+        name: MONEY_K8S_SECRETS,
         key: 'retailsts_authorizationstring',
         optional: true,
       },
@@ -537,7 +537,7 @@ const defaultContainerEnv = (project: string, environment: string, tag: string):
     name: 'sso_keystorepassword',
     valueFrom: {
       secretKeyRef: {
-        name: multiplyMoneyK8sSecret,
+        name: MONEY_K8S_SECRETS,
         key: 'sso_keystorepassword',
         optional: true,
       },
@@ -547,7 +547,7 @@ const defaultContainerEnv = (project: string, environment: string, tag: string):
     name: 'transactionverificationservice_authorizationstring',
     valueFrom: {
       secretKeyRef: {
-        name: multiplyMoneyK8sSecret,
+        name: MONEY_K8S_SECRETS,
         key: 'transactionverificationservice_authorizationstring',
         optional: true,
       },
@@ -557,7 +557,7 @@ const defaultContainerEnv = (project: string, environment: string, tag: string):
     name: 'wallet_mongo_password',
     valueFrom: {
       secretKeyRef: {
-        name: multiplyMoneyK8sSecret,
+        name: MONEY_K8S_SECRETS,
         key: 'wallet_mongo_password',
         optional: true,
       },
@@ -567,7 +567,7 @@ const defaultContainerEnv = (project: string, environment: string, tag: string):
     name: 'audit_mongo_password',
     valueFrom: {
       secretKeyRef: {
-        name: multiplyMoneyK8sSecret,
+        name: MONEY_K8S_SECRETS,
         key: 'audit_mongo_password',
         optional: true,
       },
@@ -577,7 +577,7 @@ const defaultContainerEnv = (project: string, environment: string, tag: string):
     name: 'money_settings_provider_mongo_password',
     valueFrom: {
       secretKeyRef: {
-        name: multiplyMoneyK8sSecret,
+        name: MONEY_K8S_SECRETS,
         key: 'money_settings_provider_mongo_password',
         optional: true,
       },
@@ -587,7 +587,7 @@ const defaultContainerEnv = (project: string, environment: string, tag: string):
     name: 'traderoot_soap_password',
     valueFrom: {
       secretKeyRef: {
-        name: multiplyMoneyK8sSecret,
+        name: MONEY_K8S_SECRETS,
         key: 'traderoot_soap_password',
         optional: true,
       },
@@ -597,7 +597,7 @@ const defaultContainerEnv = (project: string, environment: string, tag: string):
     name: 'inbox_mongo_password',
     valueFrom: {
       secretKeyRef: {
-        name: multiplyMoneyK8sSecret,
+        name: MONEY_K8S_SECRETS,
         key: 'inbox_mongo_password',
         optional: true,
       },
@@ -607,7 +607,7 @@ const defaultContainerEnv = (project: string, environment: string, tag: string):
     name: 'info_mongo_password',
     valueFrom: {
       secretKeyRef: {
-        name: multiplyMoneyK8sSecret,
+        name: MONEY_K8S_SECRETS,
         key: 'info_mongo_password',
         optional: true,
       },
@@ -617,7 +617,7 @@ const defaultContainerEnv = (project: string, environment: string, tag: string):
     name: 'setting_provider_client_authorization',
     valueFrom: {
       secretKeyRef: {
-        name: multiplyMoneyK8sSecret,
+        name: MONEY_K8S_SECRETS,
         key: 'setting_provider_client_authorization',
         optional: true,
       },
@@ -627,7 +627,7 @@ const defaultContainerEnv = (project: string, environment: string, tag: string):
     name: 'aws_notificationservices_client_id',
     valueFrom: {
       secretKeyRef: {
-        name: multiplyMoneyK8sSecret,
+        name: MONEY_K8S_SECRETS,
         key: 'aws_notificationservices_client_id',
         optional: true,
       },
@@ -637,7 +637,7 @@ const defaultContainerEnv = (project: string, environment: string, tag: string):
     name: 'aws_notificationservices_client_secret',
     valueFrom: {
       secretKeyRef: {
-        name: multiplyMoneyK8sSecret,
+        name: MONEY_K8S_SECRETS,
         key: 'aws_notificationservices_client_secret',
         optional: true,
       },
@@ -647,7 +647,7 @@ const defaultContainerEnv = (project: string, environment: string, tag: string):
     name: 'aws_pfmservices_client_id',
     valueFrom: {
       secretKeyRef: {
-        name: multiplyMoneyK8sSecret,
+        name: MONEY_K8S_SECRETS,
         key: 'aws_pfmservices_client_id',
         optional: true,
       },
@@ -657,7 +657,7 @@ const defaultContainerEnv = (project: string, environment: string, tag: string):
     name: 'aws_pfmservices_client_secret',
     valueFrom: {
       secretKeyRef: {
-        name: multiplyMoneyK8sSecret,
+        name: MONEY_K8S_SECRETS,
         key: 'aws_pfmservices_client_secret',
         optional: true,
       },
@@ -667,7 +667,7 @@ const defaultContainerEnv = (project: string, environment: string, tag: string):
     name: 'aws_moneymanagementforensics_client_id',
     valueFrom: {
       secretKeyRef: {
-        name: multiplyMoneyK8sSecret,
+        name: MONEY_K8S_SECRETS,
         key: 'aws_moneymanagementforensics_client_id',
         optional: true,
       },
@@ -677,7 +677,7 @@ const defaultContainerEnv = (project: string, environment: string, tag: string):
     name: 'aws_moneymanagementforensics_client_secret',
     valueFrom: {
       secretKeyRef: {
-        name: multiplyMoneyK8sSecret,
+        name: MONEY_K8S_SECRETS,
         key: 'aws_moneymanagementforensics_client_secret',
         optional: true,
       },
@@ -687,7 +687,7 @@ const defaultContainerEnv = (project: string, environment: string, tag: string):
     name: 'money_services_pfm_sync_user_id',
     valueFrom: {
       secretKeyRef: {
-        name: multiplyMoneyK8sSecret,
+        name: MONEY_K8S_SECRETS,
         key: 'money_services_pfm_sync_user_id',
         optional: true,
       },
@@ -697,7 +697,7 @@ const defaultContainerEnv = (project: string, environment: string, tag: string):
     name: 'money_services_pfm_sync_user_password',
     valueFrom: {
       secretKeyRef: {
-        name: multiplyMoneyK8sSecret,
+        name: MONEY_K8S_SECRETS,
         key: 'money_services_pfm_sync_user_password',
         optional: true,
       },
@@ -707,7 +707,7 @@ const defaultContainerEnv = (project: string, environment: string, tag: string):
     name: 'kong_consumer_batch_client_id',
     valueFrom: {
       secretKeyRef: {
-        name: multiplyMoneyK8sSecret,
+        name: MONEY_K8S_SECRETS,
         key: 'kong_consumer_batch_client_id',
         optional: true,
       },
@@ -717,7 +717,7 @@ const defaultContainerEnv = (project: string, environment: string, tag: string):
     name: 'aws_documents_services_client_id',
     valueFrom: {
       secretKeyRef: {
-        name: multiplyMoneyK8sSecret,
+        name: MONEY_K8S_SECRETS,
         key: 'aws_documents_services_client_id',
         optional: true,
       },
@@ -727,7 +727,7 @@ const defaultContainerEnv = (project: string, environment: string, tag: string):
     name: 'aws_documents_services_client_secret',
     valueFrom: {
       secretKeyRef: {
-        name: multiplyMoneyK8sSecret,
+        name: MONEY_K8S_SECRETS,
         key: 'aws_documents_services_client_secret',
         optional: true,
       },
@@ -737,7 +737,7 @@ const defaultContainerEnv = (project: string, environment: string, tag: string):
     name: 'kong_consumer_batch_client_secret',
     valueFrom: {
       secretKeyRef: {
-        name: multiplyMoneyK8sSecret,
+        name: MONEY_K8S_SECRETS,
         key: 'kong_consumer_batch_client_secret',
         optional: true,
       },
@@ -747,7 +747,7 @@ const defaultContainerEnv = (project: string, environment: string, tag: string):
     name: 'CCD_sftpuser',
     valueFrom: {
       secretKeyRef: {
-        name: multiplyMoneyK8sSecret,
+        name: MONEY_K8S_SECRETS,
         key: 'CCD_sftpuser',
         optional: true,
       },
@@ -757,7 +757,7 @@ const defaultContainerEnv = (project: string, environment: string, tag: string):
     name: 'CCD_sftphost',
     valueFrom: {
       secretKeyRef: {
-        name: multiplyMoneyK8sSecret,
+        name: MONEY_K8S_SECRETS,
         key: 'CCD_sftphost',
         optional: true,
       },
@@ -767,7 +767,7 @@ const defaultContainerEnv = (project: string, environment: string, tag: string):
     name: 'CCD_sftppassword',
     valueFrom: {
       secretKeyRef: {
-        name: multiplyMoneyK8sSecret,
+        name: MONEY_K8S_SECRETS,
         key: 'CCD_sftppassword',
         optional: true,
       },
@@ -777,7 +777,7 @@ const defaultContainerEnv = (project: string, environment: string, tag: string):
     name: 'CCD_uploadUser',
     valueFrom: {
       secretKeyRef: {
-        name: multiplyMoneyK8sSecret,
+        name: MONEY_K8S_SECRETS,
         key: 'CCD_uploadUser',
         optional: true,
       },
@@ -787,7 +787,7 @@ const defaultContainerEnv = (project: string, environment: string, tag: string):
     name: 'aws_transaction_event_services_client_id',
     valueFrom: {
       secretKeyRef: {
-        name: multiplyMoneyK8sSecret,
+        name: MONEY_K8S_SECRETS,
         key: 'aws_transaction_event_services_client_id',
         optional: true,
       },
@@ -797,7 +797,7 @@ const defaultContainerEnv = (project: string, environment: string, tag: string):
     name: 'aws_transaction_event_services_client_secret',
     valueFrom: {
       secretKeyRef: {
-        name: multiplyMoneyK8sSecret,
+        name: MONEY_K8S_SECRETS,
         key: 'aws_transaction_event_services_client_secret',
         optional: true,
       },
@@ -807,7 +807,7 @@ const defaultContainerEnv = (project: string, environment: string, tag: string):
     name: 'aws_pfm_databridge_services_client_id',
     valueFrom: {
       secretKeyRef: {
-        name: multiplyMoneyK8sSecret,
+        name: MONEY_K8S_SECRETS,
         key: 'aws_pfm_databridge_services_client_id',
         optional: true,
       },
@@ -817,7 +817,7 @@ const defaultContainerEnv = (project: string, environment: string, tag: string):
     name: 'aws_pfm_databridge_services_client_secret',
     valueFrom: {
       secretKeyRef: {
-        name: multiplyMoneyK8sSecret,
+        name: MONEY_K8S_SECRETS,
         key: 'aws_pfm_databridge_services_client_secret',
         optional: true,
       },
@@ -827,7 +827,7 @@ const defaultContainerEnv = (project: string, environment: string, tag: string):
     name: 'aws_authenticationservices_client_id',
     valueFrom: {
       secretKeyRef: {
-        name: multiplyMoneyK8sSecret,
+        name: MONEY_K8S_SECRETS,
         key: 'aws_authenticationservices_client_id',
         optional: true,
       },
@@ -837,7 +837,7 @@ const defaultContainerEnv = (project: string, environment: string, tag: string):
     name: 'aws_authenticationservices_client_secret',
     valueFrom: {
       secretKeyRef: {
-        name: multiplyMoneyK8sSecret,
+        name: MONEY_K8S_SECRETS,
         key: 'aws_authenticationservices_client_secret',
         optional: true,
       },
@@ -847,7 +847,7 @@ const defaultContainerEnv = (project: string, environment: string, tag: string):
     name: 'auth_mongoUser',
     valueFrom: {
       secretKeyRef: {
-        name: multiplyMoneyK8sSecret,
+        name: MONEY_K8S_SECRETS,
         key: 'auth_mongoUser',
         optional: true,
       },
@@ -857,7 +857,7 @@ const defaultContainerEnv = (project: string, environment: string, tag: string):
     name: 'auth_mongoPassword',
     valueFrom: {
       secretKeyRef: {
-        name: multiplyMoneyK8sSecret,
+        name: MONEY_K8S_SECRETS,
         key: 'auth_mongoPassword',
         optional: true,
       },
@@ -867,7 +867,7 @@ const defaultContainerEnv = (project: string, environment: string, tag: string):
     name: 'aws_transactionlistener_client_id',
     valueFrom: {
       secretKeyRef: {
-        name: multiplyMoneyK8sSecret,
+        name: MONEY_K8S_SECRETS,
         key: 'aws_transactionlistener_client_id',
         optional: true,
       },
@@ -877,7 +877,7 @@ const defaultContainerEnv = (project: string, environment: string, tag: string):
     name: 'aws_transactionlistener_client_secret',
     valueFrom: {
       secretKeyRef: {
-        name: multiplyMoneyK8sSecret,
+        name: MONEY_K8S_SECRETS,
         key: 'aws_transactionlistener_client_secret',
         optional: true,
       },
@@ -887,7 +887,7 @@ const defaultContainerEnv = (project: string, environment: string, tag: string):
     name: 'aws_transactionservices_client_id',
     valueFrom: {
       secretKeyRef: {
-        name: multiplyMoneyK8sSecret,
+        name: MONEY_K8S_SECRETS,
         key: 'aws_transactionservices_client_id',
         optional: true,
       },
@@ -897,7 +897,7 @@ const defaultContainerEnv = (project: string, environment: string, tag: string):
     name: 'aws_transactionservices_client_secret',
     valueFrom: {
       secretKeyRef: {
-        name: multiplyMoneyK8sSecret,
+        name: MONEY_K8S_SECRETS,
         key: 'aws_transactionservices_client_secret',
         optional: true,
       },
@@ -907,7 +907,7 @@ const defaultContainerEnv = (project: string, environment: string, tag: string):
     name: 'bankservservices_mongodb_password',
     valueFrom: {
       secretKeyRef: {
-        name: multiplyMoneyK8sSecret,
+        name: MONEY_K8S_SECRETS,
         key: 'bankservservices_mongodb_password',
         optional: true,
       },
@@ -917,7 +917,7 @@ const defaultContainerEnv = (project: string, environment: string, tag: string):
     name: 'retailClientUsername',
     valueFrom: {
       secretKeyRef: {
-        name: multiplyMoneyK8sSecret,
+        name: MONEY_K8S_SECRETS,
         key: 'retailClientUsername',
         optional: true,
       },
@@ -927,7 +927,7 @@ const defaultContainerEnv = (project: string, environment: string, tag: string):
     name: 'retailClientPassword',
     valueFrom: {
       secretKeyRef: {
-        name: multiplyMoneyK8sSecret,
+        name: MONEY_K8S_SECRETS,
         key: 'retailClientPassword',
         optional: true,
       },
@@ -937,7 +937,7 @@ const defaultContainerEnv = (project: string, environment: string, tag: string):
   name: 'aws_ussdservices_client_id',
     valueFrom: {
       secretKeyRef: {
-        name: multiplyMoneyK8sSecret,
+        name: MONEY_K8S_SECRETS,
         key: 'aws_ussdservices_client_id',
         optional: true,
       },
@@ -947,7 +947,7 @@ const defaultContainerEnv = (project: string, environment: string, tag: string):
   name: 'aws_ussdservices_client_secret',
     valueFrom: {
       secretKeyRef: {
-        name: multiplyMoneyK8sSecret,
+        name: MONEY_K8S_SECRETS,
         key: 'aws_ussdservices_client_secret',
         optional: true,
       },
@@ -957,7 +957,7 @@ const defaultContainerEnv = (project: string, environment: string, tag: string):
   name: 'aws_paymentservices_client_id',
     valueFrom: {
       secretKeyRef: {
-        name: multiplyMoneyK8sSecret,
+        name: MONEY_K8S_SECRETS,
         key: 'aws_paymentservices_client_id',
         optional: true,
       },
@@ -967,7 +967,7 @@ const defaultContainerEnv = (project: string, environment: string, tag: string):
   name: 'aws_paymentservices_client_secret',
     valueFrom: {
       secretKeyRef: {
-        name: multiplyMoneyK8sSecret,
+        name: MONEY_K8S_SECRETS,
         key: 'aws_paymentservices_client_secret',
         optional: true,
       },
@@ -977,7 +977,7 @@ const defaultContainerEnv = (project: string, environment: string, tag: string):
   name: 'mongo_password',
     valueFrom: {
       secretKeyRef: {
-        name: multiplyMoneyK8sSecret,
+        name: MONEY_K8S_SECRETS,
         key: 'mongo_password',
         optional: true,
       },
@@ -987,7 +987,7 @@ const defaultContainerEnv = (project: string, environment: string, tag: string):
   name: 'aws_sftpmonitorservices_client_id',
     valueFrom: {
       secretKeyRef: {
-        name: multiplyMoneyK8sSecret,
+        name: MONEY_K8S_SECRETS,
         key: 'aws_sftpmonitorservices_client_id',
         optional: true,
       },
@@ -997,7 +997,7 @@ const defaultContainerEnv = (project: string, environment: string, tag: string):
   name: 'aws_sftpmonitorservices_client_secret',
     valueFrom: {
       secretKeyRef: {
-        name: multiplyMoneyK8sSecret,
+        name: MONEY_K8S_SECRETS,
         key: 'aws_sftpmonitorservices_client_secret',
         optional: true,
       },
@@ -1007,7 +1007,7 @@ const defaultContainerEnv = (project: string, environment: string, tag: string):
   name: 'retail_password',
     valueFrom: {
       secretKeyRef: {
-        name: multiplyMoneyK8sSecret,
+        name: MONEY_K8S_SECRETS,
         key: 'retail_password',
         optional: true,
       },
@@ -1017,7 +1017,7 @@ const defaultContainerEnv = (project: string, environment: string, tag: string):
   name: 'retail_username',
     valueFrom: {
       secretKeyRef: {
-        name: multiplyMoneyK8sSecret,
+        name: MONEY_K8S_SECRETS,
         key: 'retail_username',
         optional: true,
       },
@@ -1027,7 +1027,7 @@ const defaultContainerEnv = (project: string, environment: string, tag: string):
   name: 'itouch_user_id',
     valueFrom: {
       secretKeyRef: {
-        name: multiplyMoneyK8sSecret,
+        name: MONEY_K8S_SECRETS,
         key: 'itouch_user_id',
         optional: true,
       },
@@ -1037,7 +1037,7 @@ const defaultContainerEnv = (project: string, environment: string, tag: string):
   name: 'itouch_password',
     valueFrom: {
       secretKeyRef: {
-        name: multiplyMoneyK8sSecret,
+        name: MONEY_K8S_SECRETS,
         key: 'itouch_password',
         optional: true,
       },

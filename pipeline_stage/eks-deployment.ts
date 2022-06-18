@@ -2,7 +2,7 @@ import { Construct } from "constructs";
 
 import { toValidConstructName } from '../lib/util';
 import { BuildSpec, PipelineProject } from "aws-cdk-lib/aws-codebuild";
-import { codeBuildSpecVersion, defaultCodeBuildEnvironment } from "../lib/constants";
+import { CODE_BUILD_SPEC_VERSION, DEFAULT_CODE_BUILD_ENVIRONMENT } from "../lib/constants";
 import { CodeBuildAction } from "aws-cdk-lib/aws-codepipeline-actions";
 import { Artifact } from "aws-cdk-lib/aws-codepipeline";
 import { CommonCommands } from "../lib/commands";
@@ -61,7 +61,7 @@ const createCodeBuildEksDeploy = (scope: Construct, props: deployParameters): Pi
   const buildProject = new PipelineProject(scope, `${toValidConstructName(props.project)}CodeBuildEcsDeployProject`, {
     projectName: `${props.project}-${props.branch}-deploy`,
     buildSpec: getEksCDKDeployBuildSpec(props),
-    environment: defaultCodeBuildEnvironment,
+    environment: DEFAULT_CODE_BUILD_ENVIRONMENT,
   });
 
   return buildProject;
@@ -69,7 +69,7 @@ const createCodeBuildEksDeploy = (scope: Construct, props: deployParameters): Pi
 
 const getEksCDKDeployBuildSpec = (props: deployParameters): BuildSpec => {
   const buildSpec = BuildSpec.fromObject({
-    version: codeBuildSpecVersion,
+    version: CODE_BUILD_SPEC_VERSION,
     phases: {
       install: {
         commands: [

@@ -1,6 +1,6 @@
 import { CompositePrincipal, Effect, IRole, PolicyStatement, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
 import { Construct } from 'constructs';
-import { ECR_REGION, GITHUB_TOKEN_SECRET_NAME, NEXUS_PASSWORD_SSM_KEY, NEXUS_USERNAME_SSM_KEY } from '../lib/constants';
+import { ECR_REGION, EKS_DEPLOY_ROLE, GITHUB_TOKEN_SECRET_NAME, INGRESS_TEMPLATES_BUCKET_NAME, K8S_TEMPLATES_BUCKET_NAME, NEXUS_PASSWORD_SSM_KEY, NEXUS_USERNAME_SSM_KEY } from '../lib/constants';
 
 export class MoneyRoleBuilder {
 
@@ -22,11 +22,12 @@ export class MoneyRoleBuilder {
           'ecr:CompleteLayerUpload',
           'ecr:InitiateLayerUpload',
           'ecr:GetDownloadUrlForLayer',
+          'ecr:BatchGetImage',
           'ecr:PutImage',
           'ecr:UploadLayerPart'
         ],
         resources: [
-          `arn:aws:ecr:${ECR_REGION}:${account}:repository/${repositoryName}`
+          `*`
         ]
       }));
     
@@ -34,10 +35,26 @@ export class MoneyRoleBuilder {
         effect: Effect.ALLOW,
         actions: [
           'codebuild:StartBuild',
+          'secretsmanager:GetSecretValue',
           'ecr:GetAuthorizationToken',
-          'secretsmanager:GetSecretValue'
         ],
         resources: ['*']
+      }));
+
+      buildRole.addToPrincipalPolicy(new PolicyStatement({
+        effect: Effect.ALLOW,
+        actions: [
+          'ecr:BatchGetImage',
+          'ecr:BatchCheckLayerAvailability',
+          'ecr:CompleteLayerUpload',
+          'ecr:InitiateLayerUpload',
+          'ecr:GetDownloadUrlForLayer',
+          'ecr:PutImage',
+          'ecr:UploadLayerPart'
+        ],
+        resources: [
+          `arn:aws:ecr:${ECR_REGION}:${account}:repository/${repositoryName}`
+        ]
       }));
     
       buildRole.addToPrincipalPolicy(new PolicyStatement({
@@ -59,61 +76,63 @@ export class MoneyRoleBuilder {
       return buildRole;
     }
 
-    // static buildEksDeployRole (scope:Construct, env:string, repositoryName:string, account:string):IRole {
-    //   // Role should be created with EKS cluster and mapped to admin group
-    //   const roleName = `money-eks-${repositoryName.toLocaleLowerCase()}-deploy-${env.toLocaleLowerCase()}`;
-    //   const eksRole =  Role.fromRoleArn(
-    //     scope,
-    //     roleName,
-    //     'arn:aws:iam::737245153745:role/eks-deploy'
-    //   );
+    static buildEksDeployRole (scope:Construct, env:string, repositoryName:string, account:string):IRole {
+      // Role should be created with EKS cluster and mapped to admin group
+      const roleName = `money-eks-${repositoryName.toLocaleLowerCase()}-deploy-${env.toLocaleLowerCase()}`;
 
-    //   // new Role(scope, roleName, {
-    //   //   roleName: roleName,
-    //   //   assumedBy: new CompositePrincipal(
-    //   //     new ServicePrincipal('codebuild.amazonaws.com')
-    //   //   )
-    //   // });
+      const eksRole = new Role(scope, roleName, {
+        roleName: roleName,
+        assumedBy: new CompositePrincipal(
+          new ServicePrincipal('codebuild.amazonaws.com')
+        )
+      });
 
-    //   // eksRole.addToPrincipalPolicy(new PolicyStatement({
-    //   //   effect: Effect.ALLOW,
-    //   //   actions: [
-    //   //     'sts:AssumeRole',
-    //   //   ],
-    //   //   resources: [
-    //   //     `arn:aws:iam::${account}:role/eks-deploy`
-    //   //   ]
-    //   // }));
+      eksRole.addToPrincipalPolicy(new PolicyStatement({
+        effect: Effect.ALLOW,
+        actions: ['iam:PassRole'],
+        resources: [EKS_DEPLOY_ROLE]
+      }));
   
-    //   // eksRole.addToPrincipalPolicy(new PolicyStatement({
-    //   //   effect: Effect.ALLOW,
-    //   //   actions: [
-    //   //     'eks:DescribeNodegroup',
-    //   //     'eks:DescribeUpdate',
-    //   //     'eks:DescribeCluster',
-    //   //   ],
-    //   //   resources: ['*']
-    //   // }));
+      eksRole.addToPrincipalPolicy(new PolicyStatement({
+        effect: Effect.ALLOW,
+        actions: [
+          'eks:DescribeCluster',
+          'eks:ListClusters',
+          'secretsmanager:GetSecretValue',
+          'ecr:GetAuthorizationToken',
+          'ecr:BatchGetImage',
+          'ecr:BatchCheckLayerAvailability',
+          'ecr:CompleteLayerUpload',
+          'ecr:InitiateLayerUpload',
+          'ecr:GetDownloadUrlForLayer',
+          'ecr:PutImage',
+          'ecr:UploadLayerPart'
+        ],
+        resources: ['*']
+      }));
 
-    //   // eksRole.addToPrincipalPolicy(new PolicyStatement({
-    //   //   effect: Effect.ALLOW,
-    //   //   actions: [
-    //   //     's3:GetObject*',
-    //   //     's3:GetBucket*',
-    //   //     's3:List*',
-    //   //     's3:DeleteObject*',
-    //   //     's3:PutObject',
-    //   //     's3:Abort*',
-    //   //   ],
-    //   //   resources: [
-    //   //     `arn:aws:s3:::${K8S_TEMPLATES_BUCKET_NAME}/*`,
-    //   //     `arn:aws:s3:::${K8S_TEMPLATES_BUCKET_NAME} .k8s/`,
-    //   //     `arn:aws:s3:::${K8S_TEMPLATES_BUCKET_NAME}`
-    //   //   ]
-    //   // }))
+      eksRole.addToPrincipalPolicy(new PolicyStatement({
+        effect: Effect.ALLOW,
+        actions: [
+          's3:GetObject*',
+          's3:GetBucket*',
+          's3:List*',
+          's3:DeleteObject*',
+          's3:PutObject',
+          's3:Abort*',
+        ],
+        resources: [
+          `arn:aws:s3:::${K8S_TEMPLATES_BUCKET_NAME}/*`,
+          `arn:aws:s3:::${K8S_TEMPLATES_BUCKET_NAME} .k8s/`,
+          `arn:aws:s3:::${K8S_TEMPLATES_BUCKET_NAME}`,
+          `arn:aws:s3:::${INGRESS_TEMPLATES_BUCKET_NAME}/*`,
+          `arn:aws:s3:::${INGRESS_TEMPLATES_BUCKET_NAME} .ingress/`,
+          `arn:aws:s3:::${INGRESS_TEMPLATES_BUCKET_NAME}`
+        ]
+      }))
 
-    //   return eksRole;
-    // }
+      return eksRole;
+    }
 
     static buildCodeBuildReleaseRole (scope:Construct, eksEnv:string, repositoryName:string, account:string, region:string):IRole {
       const roleName = `money-eks-${repositoryName.toLocaleLowerCase()}-release-${eksEnv.toLocaleLowerCase()}`;
@@ -177,8 +196,8 @@ export class MoneyRoleBuilder {
       return role;
     }
 
-    static buildUpdateRole(scope:Construct, repositoryName:string, account:string, region: string): IRole {
-      const roleName = `update-cluster-${repositoryName.toLocaleLowerCase()}`;
+    static buildUpdateRole(scope:Construct, repositoryName:string, account:string, region: string, deployEnv:string): IRole {
+      const roleName = `update-cluster-${repositoryName.toLocaleLowerCase()}-${deployEnv.toLocaleLowerCase()}`;
       const role = new Role(scope, roleName, {
         roleName: roleName,
         assumedBy: new CompositePrincipal(

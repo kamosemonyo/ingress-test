@@ -3,7 +3,7 @@ import { CodeBuildAction } from "aws-cdk-lib/aws-codepipeline-actions";
 import { BuildSpec, PipelineProject } from 'aws-cdk-lib/aws-codebuild';
 import { Artifact } from 'aws-cdk-lib/aws-codepipeline';
 import { toValidConstructName } from '../../lib/util';
-import { codeBuildSpecVersion, defaultCodeBuildEnvironment, mainGitBranch, nexusRepository } from '../../lib/constants';
+import { CODE_BUILD_SPEC_VERSION, DEFAULT_CODE_BUILD_ENVIRONMENT, EKS_DEPLOY_ROLE, MAIN_GIT_BRANCH, NEXUS_REPOSITORY } from '../../lib/constants';
 import { IVpc } from 'aws-cdk-lib/aws-ec2';
 import { CommonCommands } from '../../lib/commands';
 import { IPrincipal } from 'aws-cdk-lib/aws-iam';
@@ -36,7 +36,7 @@ const createMavenDeployProject = (scope: Construct, params: parameters): Pipelin
   const buildProject = new PipelineProject(scope, `${toValidConstructName(params.repositoryName)}CodeBuildProject`, {
     projectName: `${params.repositoryName}-${params.branch}-deploy`,
     buildSpec: buildMavenDeploySpec(params),
-    environment: defaultCodeBuildEnvironment,
+    environment: DEFAULT_CODE_BUILD_ENVIRONMENT,
     vpc: params.vpc,
   });
 
@@ -45,7 +45,7 @@ const createMavenDeployProject = (scope: Construct, params: parameters): Pipelin
 
 const buildMavenDeploySpec = (params: parameters): BuildSpec => {
   const buildSpec = BuildSpec.fromObject({
-    version: codeBuildSpecVersion,
+    version: CODE_BUILD_SPEC_VERSION,
     phases: {
       install: {
         runtime_versions: {
@@ -61,6 +61,13 @@ const buildMavenDeploySpec = (params: parameters): BuildSpec => {
           'mvn -version',
           ...CommonCommands.setupMvnSettings(params.ssmRegion),
           'mvn deploy',
+        ]
+      },
+      post_build: {
+        commands: [
+          ...CommonCommands.assumeAwsRole(EKS_DEPLOY_ROLE),
+          'aws eks update-kubeconfig --name non-prod --region af-south-1',
+          `kubectl apply -f ingress.yaml`
         ]
       }
     },

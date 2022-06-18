@@ -1,29 +1,32 @@
-import { Construct  } from "constructs";
-import { CfnParameter, RemovalPolicy, Stack, StackProps, TagType } from "aws-cdk-lib";
-import { aws_s3 as s3 } from 'aws-cdk-lib';
-import { aws_codepipeline as codepipeline } from "aws-cdk-lib";
-import { aws_ec2 as ec2 } from "aws-cdk-lib";
-import { getSourceAction } from "../pipeline_stage/code-source";
-import { toValidConstructName } from "../lib/util";
-import { CODE_BUILD_VPC_NAME, ENV_DEV, ENV_PRE, ENV_PROD, MAIN_GIT_BRANCH } from "../lib/constants";
-import { createMavenDockerBuildAction } from "../pipeline_stage/maven/mvn-build";
-import { Effect, PolicyStatement } from "aws-cdk-lib/aws-iam";
-import { updateClusterProject } from "../pipeline_stage/update-cluster";
+import { CfnParameter, RemovalPolicy, Stack, StackProps } from "aws-cdk-lib";
+import { Artifact, Pipeline } from "aws-cdk-lib/aws-codepipeline";
 import { ManualApprovalAction } from "aws-cdk-lib/aws-codepipeline-actions";
-import { MoneyTags, MoneyTagType } from "../tags/tags";
+import { Vpc } from "aws-cdk-lib/aws-ec2";
+import { Effect, PolicyStatement } from "aws-cdk-lib/aws-iam";
+import { Bucket, IBucket } from "aws-cdk-lib/aws-s3";
+import { Construct } from "constructs";
+import { CODE_BUILD_VPC_NAME, ENV_DEV, ENV_PRE, ENV_PROD, GITHUB_ORG, MAIN_GIT_BRANCH } from "../lib/constants";
+import { toValidConstructName } from "../lib/util";
+import { getSourceAction } from "../pipeline_stage/code-source";
+import { createKongDockerBuildAction } from "../pipeline_stage/kong/kong-build";
+import { createKongDeployAction } from "../pipeline_stage/kong/kong-deploy";
+import { updateClusterProject } from "../pipeline_stage/update-cluster";
+import { MoneyTags } from "../tags/tags";
 
-interface MavenPipelineProps extends StackProps {
+
+interface KongPipelineProps extends StackProps {
   repositoryName:string,
   serviceName: string,
   propertiesFile:string,
-  replicas: Number
+  replicas: Number,
+  host?:string
 }
 
-export class MavenPipelineStack extends Stack {
-  constructor(scope: Construct, id: string, props: MavenPipelineProps) {
+export class KongPipelineStack extends Stack {
+  constructor(scope: Construct, id: string, props: KongPipelineProps) {
     super(scope, id, props);
 
-    const artifactsBucket: s3.IBucket = new s3.Bucket(this, 'ArtifactsBucket', {
+     const artifactsBucket:IBucket = new Bucket(this, 'ArtifactsBucket', {
       removalPolicy: RemovalPolicy.DESTROY,
       autoDeleteObjects: true,
     });
@@ -62,13 +65,13 @@ export class MavenPipelineStack extends Stack {
       throw Error('Expected context [repositoryName] to be defined.');
     }
 
-    const sourceCodeArtifact = new codepipeline.Artifact();
-    const buildOutputArtifact = new codepipeline.Artifact();
+    const sourceCodeArtifact = new Artifact();
+    const buildOutputArtifact = new Artifact();
 
 
-    const pipeline = new codepipeline.Pipeline(this, `${toValidConstructName(repositoryName)}Pipeline`, {
+    const pipeline = new Pipeline(this, `${toValidConstructName(repositoryName)}Pipeline`, {
       restartExecutionOnUpdate: true,
-      pipelineName: `${repositoryName}-${branch}`,
+      pipelineName: `${repositoryName}-pipeline`,
       artifactBucket: artifactsBucket,
     });
 
@@ -91,11 +94,12 @@ export class MavenPipelineStack extends Stack {
           githubOrg: githubOrgParam.valueAsString,
           bucketKey: bucketKeyParam.valueAsString,
           bucketName: bucketNameParam.valueAsString,
+          
         })
       ]
     });
 
-    const vpc = ec2.Vpc.fromLookup(this, 'CodeBuildVpc', {
+    const vpc = Vpc.fromLookup(this, 'CodeBuildVpc', {
       vpcName: CODE_BUILD_VPC_NAME,
       isDefault: false,
     });
@@ -103,7 +107,7 @@ export class MavenPipelineStack extends Stack {
     pipeline.addStage({
       stageName: 'Build',
       actions: [
-        createMavenDockerBuildAction(this, {
+        createKongDockerBuildAction(this, {
           vpc: vpc,
           branch: branch,
           repositoryName: repositoryName,
@@ -113,47 +117,53 @@ export class MavenPipelineStack extends Stack {
           pomFilePath: pomFile,
           inputArtifact: sourceCodeArtifact,
           outputArtifact: buildOutputArtifact,
-          environment: ENV_PRE,
+          environment: ENV_DEV,
           githubOrgName: githubOrgParam.valueAsString
         })
-      ],
+      ]
     });
 
     pipeline.addStage({
       stageName: 'Deploy_Dev',
       actions: [
-        updateClusterProject(this, {
-          input: buildOutputArtifact,
+        createKongDeployAction(this, {
+          vpc: vpc,
+          inputArtifact: sourceCodeArtifact,
           account: Stack.of(this).account,
           region: Stack.of(this).region,
           branch: branch,
-          githubOrg: githubOrgParam.valueAsString,
           repositoryName: repositoryName,
-          deployEnv: ENV_DEV
+          environment: ENV_DEV,
+          githubOrgName: GITHUB_ORG,
+          propertiesFilePath: props.propertiesFile,
+          host: props.host
         })
       ]
     });
 
     pipeline.addStage({
-      stageName: 'Promote_To_Pre-production',
+      stageName:'Promote_To_Preprod',
       actions: [
         new ManualApprovalAction({
-          actionName: 'PromoteToPre'
+          actionName: 'DeployToPreprod'
         })
       ]
     });
 
     pipeline.addStage({
-      stageName: 'Deploy_To_Pre-production',
+      stageName:'Deploy_To_Preprod',
       actions: [
-        updateClusterProject(this, {
-          input: buildOutputArtifact,
+        createKongDeployAction(this, {
+          vpc: vpc,
+          branch: branch,
+          repositoryName: repositoryName,
           account: Stack.of(this).account,
           region: Stack.of(this).region,
-          branch: branch,
-          githubOrg: githubOrgParam.valueAsString,
-          repositoryName: repositoryName,
-          deployEnv: ENV_PRE
+          propertiesFilePath: props.propertiesFile,
+          inputArtifact: sourceCodeArtifact,
+          environment: ENV_PRE,
+          githubOrgName: githubOrgParam.valueAsString,
+          host: props.host
         })
       ]
     });
@@ -162,31 +172,27 @@ export class MavenPipelineStack extends Stack {
       stageName: 'Promote_To_Production',
       actions: [
         new ManualApprovalAction({
-          actionName: 'PromoteToPre'
+          actionName: 'PromoteToProduction'
         })
       ]
     });
 
     pipeline.addStage({
-      stageName: 'Deploy_Prod',
+      stageName: 'Deploy_To_Production',
       actions: [
-        updateClusterProject(this, {
-          input: buildOutputArtifact,
+        createKongDeployAction(this, {
+          vpc: vpc,
+          branch: branch,
+          githubOrgName: GITHUB_ORG,
+          repositoryName: repositoryName,
           account: Stack.of(this).account,
           region: Stack.of(this).region,
-          branch: branch,
-          githubOrg: githubOrgParam.valueAsString,
-          repositoryName: repositoryName,
-          deployEnv: ENV_PROD
+          inputArtifact: sourceCodeArtifact,
+          environment: ENV_PROD,
+          propertiesFilePath: props.propertiesFile,
+          host: props.host
         })
       ]
     });
-
-  };
-
-  addTags (resource:any) {
-    MoneyTags.addTag(MoneyTagType.PIPELINE_RESOURCE, resource);
-    MoneyTags.addTag(MoneyTagType.BUILD_RESOURCE, resource);
-    MoneyTags.addTag(MoneyTagType.JAVA_SERVICE, resource);
   }
 }

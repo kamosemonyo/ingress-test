@@ -1,10 +1,9 @@
 import { BuildSpec, PipelineProject } from "aws-cdk-lib/aws-codebuild";
-import { Artifact, Pipeline } from "aws-cdk-lib/aws-codepipeline";
-import { CodeBuildAction, CodeBuildActionProps } from "aws-cdk-lib/aws-codepipeline-actions";
-import { Role } from "aws-cdk-lib/aws-iam";
+import { Artifact } from "aws-cdk-lib/aws-codepipeline";
+import { CodeBuildAction } from "aws-cdk-lib/aws-codepipeline-actions";
 import { Construct } from "constructs";
 import { CommonCommands } from "../lib/commands";
-import { codeBuildSpecVersion, defaultCodeBuildEnvironment, ENV_PRE, GITHUB_ORG, GITHUB_TOKEN_SECRET_NAME } from "../lib/constants";
+import { CODE_BUILD_SPEC_VERSION, DEFAULT_CODE_BUILD_ENVIRONMENT, ENV_PRE, GITHUB_ORG, GITHUB_TOKEN_SECRET_NAME } from "../lib/constants";
 import { toValidConstructName } from "../lib/util";
 import { MoneyRoleBuilder } from "./money-role-builder";
 
@@ -14,22 +13,22 @@ export interface parameters {
   branch: string,
   account: string,
   region: string,
-  input: Artifact
+  input: Artifact,
+  deployEnv: string,
 }
 
 export const updateClusterProject = (scope: Construct, props: parameters) => {
-  const projectName = `${props.repositoryName}-${props.branch}-update`;
-  const stageName = `${toValidConstructName(props.repositoryName)}MavenDockerCodeUpdateProject`;
-  const role = MoneyRoleBuilder.buildUpdateRole(scope, props.repositoryName, props.account, props.region)
+  const projectName = `${props.repositoryName}-${props.branch}-update-${props.deployEnv}`;
+  const stageName = `${toValidConstructName(props.repositoryName)}${props.deployEnv}MavenDockerCodeUpdateProject`;
+  const role = MoneyRoleBuilder.buildUpdateRole(scope, props.repositoryName, props.account, props.region, props.deployEnv)
 
   return new CodeBuildAction({
-    
     actionName: 'Update_Cluster',
     input: props.input,
     project: new PipelineProject(scope, stageName, {
       role: role,
       projectName: projectName,
-      environment: defaultCodeBuildEnvironment,
+      environment: DEFAULT_CODE_BUILD_ENVIRONMENT,
       buildSpec: updateClusterSpec(props),
     })
   });
@@ -37,7 +36,7 @@ export const updateClusterProject = (scope: Construct, props: parameters) => {
 
 const updateClusterSpec = (props: parameters): BuildSpec => {
   const buildSpec = BuildSpec.fromObject({
-    version: codeBuildSpecVersion,
+    version: CODE_BUILD_SPEC_VERSION,
     env: {
       'secrets-manager': {
         GITHUB_AUTH_TOKEN: GITHUB_TOKEN_SECRET_NAME
@@ -54,7 +53,7 @@ const updateClusterSpec = (props: parameters): BuildSpec => {
         commands: [
           'VERSION=$(cat VERSION)',
           'echo $VERSION',
-          ...CommonCommands.updateCluster(props.repositoryName, ENV_PRE, props.githubOrg)
+          ...CommonCommands.updateCluster(props.repositoryName, props.deployEnv, props.githubOrg)
         ]
       }
     },
