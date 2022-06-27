@@ -1,7 +1,7 @@
 import { Environment, Stack, StackProps } from "aws-cdk-lib";
 import { Construct } from "constructs";
 import { Account } from "../lib/account";
-import { Service } from "../misc/service";
+import { Service } from "../service/service";
 import { createEcrRepository } from "../pipeline_stage/ecr-repository";
 import { MoneyTags, MoneyTagType } from "../tags/tags";
 

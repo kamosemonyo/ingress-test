@@ -1,4 +1,4 @@
-import { ENV_PRE, ENV_PROD, KONG_DEV_TAG, KONG_PRE_TAG, KONG_PROD_TAG } from "./constants";
+import { DEV_VERSION, ENV_DEV, ENV_PRE, ENV_PROD, KONG_DEV_TAG, KONG_PRE_TAG, KONG_PROD_TAG, RELEASE_VERSION } from "./constants";
 
 export const toValidConstructName = (id: string) => {
   let str = id.split('_').join('-');
@@ -7,6 +7,14 @@ export const toValidConstructName = (id: string) => {
   .map(w => w[0].toUpperCase() + w.substr(1).toLowerCase())
   .join('-');
 };
+
+export function getServiceTagVersion (environment:string):string {
+  if (environment == ENV_DEV) {
+    return DEV_VERSION
+  } else {
+    return RELEASE_VERSION
+  }
+}
 
 export function getKongTagVersion (environment:string):string {
   if (environment == ENV_PROD) {

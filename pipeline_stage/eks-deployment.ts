@@ -5,7 +5,7 @@ import { BuildSpec, PipelineProject } from "aws-cdk-lib/aws-codebuild";
 import { CODE_BUILD_SPEC_VERSION, DEFAULT_CODE_BUILD_ENVIRONMENT } from "../lib/constants";
 import { CodeBuildAction } from "aws-cdk-lib/aws-codepipeline-actions";
 import { Artifact } from "aws-cdk-lib/aws-codepipeline";
-import { CommonCommands } from "../lib/commands";
+import { Shell } from "../lib/shell";
 
 
 const defaultCPU: number = 256;
@@ -73,8 +73,8 @@ const getEksCDKDeployBuildSpec = (props: deployParameters): BuildSpec => {
     phases: {
       install: {
         commands: [
-          ...CommonCommands.debugEnvCmd,
-          ...CommonCommands.installCdkCmd,
+          ...Shell.debugEnvCmd,
+          ...Shell.installCdkCmd,
         ]
       },
       build: {

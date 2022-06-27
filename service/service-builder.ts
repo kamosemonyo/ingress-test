@@ -4,7 +4,7 @@ import { ENV_PRE, ENV_PROD } from '../lib/constants';
 import { Service } from './service';
 
 export class ServiceBuilder {
-  private static filepath:PathLike = './misc/projects.yml';
+  private static filepath:PathLike = './service/projects.yml';
 
   static buildServices (env:string = ENV_PRE):Service[] {
     if (env !== ENV_PRE && env !== ENV_PROD) {

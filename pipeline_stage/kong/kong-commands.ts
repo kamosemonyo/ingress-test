@@ -1,5 +1,6 @@
-import { CommonCommands } from "../../lib/commands"
+import { Shell } from "../../lib/shell"
 import { ECR_REGION, EKS_DEPLOY_ROLE, ENV_PRE, ENV_PROD, INGRESS_TEMPLATES_BUCKET_NAME, KONG_DEV_TAG, KONG_PRE_TAG, KONG_PROD_TAG } from "../../lib/constants"
+import { Kubectl } from "../../lib/kubctl"
 import { getKongTagVersion } from "../../lib/util"
 
 
@@ -10,16 +11,31 @@ export interface KongCommandProps {
     propertiesFilePath:string,
     host?:string,
     replicas?:Number
+    githubOrgName:string
 }
 
-export function kongVersionCommand (params:KongCommandProps) {
+export function kongVersionCommand (params:KongCommandProps, isVersionUpdating?:boolean) {
+  isVersionUpdating = (isVersionUpdating == undefined) ? false : isVersionUpdating
+  
   return [
     `export VERSION=\`grep -oP \'version=\\K.*\' ${params.propertiesFilePath}\``,
     `echo "current new snapshot version $VERSION"`,
+    ...(isVersionUpdating) ? updateKongVersion(params): [],
     'echo $VERSION > VERSION',
     `${KONG_DEV_TAG}=$(echo $VERSION)-snapshot`,
     `${KONG_PRE_TAG}=$(echo $VERSION)-pre`,
     `${KONG_PROD_TAG}=$(echo $VERSION)-prod`,
+  ]
+}
+
+function updateKongVersion (params:KongCommandProps):string[] {
+  return [
+    'OLD_VERSION=$VERSION',
+    'VERSION=$(($VERSION + 1))',
+    // update version number
+    `eval "sed -i 's/version=$OLD_VERSION/version=$VERSION/' version.properties"`,
+    'git commit -am "Version updated to v$VERSION"',
+    `git push https://$GITHUB_AUTH_TOKEN@github.com/${params.githubOrgName}/${params.repositoryName}.git --all`
   ]
 }
 
@@ -46,31 +62,35 @@ export function kongDeployToK8s (params:KongCommandProps) {
   }
 
   const kongTagVersion = getKongTagVersion(params.environment)
-  const deployment = params.repositoryName + `-$(echo $${kongTagVersion})`
   const service = params.repositoryName
   const host = params.host.replace('$env', params.environment)
+  
+  const folder = '.ingress'
 
   return [
-    `aws s3 sync s3://${INGRESS_TEMPLATES_BUCKET_NAME} .ingress/`,
+    Shell.s3DownloadFolder(INGRESS_TEMPLATES_BUCKET_NAME, folder),
     // Populate placeholder environment variables on templates
-    `namespace=${params.environment}`,
-    `service=${service}`,
-    `deployment=${deployment}`,
-    `hostname=${host}`,
-    `docker_image=${params.account}.dkr.ecr.${ECR_REGION}.amazonaws.com/${service}:$${kongTagVersion}`,
+    ...Shell.setDeploymentEnvs({
+      account: params.account,
+      region: ECR_REGION,
+      namespace: params.environment,
+      service: service,
+      version: kongTagVersion,
+      hostname: host
+    }),
     // Create Kong deployment manifest file
-    'eval "echo \\"$(cat .ingress/deployment.yml)\\"" > .ingress/deployment.yml',
-    'cat .ingress/deployment.yml',
+    Shell.replaceEnvPlaceHolderValues(`${folder}/deployment.yml`),
+    Shell.printFileContents(`${folder}/deployment.yml`),
     // Create Kong service manifest files
-    'eval "echo \\"$(cat .ingress/service.yml)\\"" > .ingress/service.yml',
-    'cat .ingress/service.yml',
+    Shell.replaceEnvPlaceHolderValues(`${folder}/service.yml`),
+    Shell.printFileContents(`${folder}/service.yml`),
     // Create Kong ingress manifest file
-    'eval "echo \\"$(cat .ingress/ingress.yml)\\"" > .ingress/ingress.yml',
-    'cat .ingress/ingress.yml',
+    Shell.replaceEnvPlaceHolderValues(`${folder}/ingress.yml`),
+    Shell.printFileContents(`${folder}/ingress.yml`),
     // Assume eks deploy role
-    ...CommonCommands.assumeAwsRole(EKS_DEPLOY_ROLE),
-    'aws eks update-kubeconfig --name non-prod --region af-south-1',
-    'kubectl apply -f .ingress'
+    ...Shell.assumeAwsRole(EKS_DEPLOY_ROLE),
+    Kubectl.login(),
+    Kubectl.applyFolder(folder)
   ]
 }
 

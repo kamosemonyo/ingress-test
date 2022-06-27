@@ -3,7 +3,7 @@ import { Artifact } from "aws-cdk-lib/aws-codepipeline"
 import { CodeBuildAction } from "aws-cdk-lib/aws-codepipeline-actions"
 import { IVpc } from "aws-cdk-lib/aws-ec2"
 import { Construct } from "constructs"
-import { CODE_BUILD_SPEC_VERSION, DEFAULT_CODE_BUILD_ENVIRONMENT, GITHUB_TOKEN_SECRET_NAME } from "../../lib/constants"
+import { CODE_BUILD_SPEC_VERSION, DEFAULT_CODE_BUILD_ENVIRONMENT, GITHUB_ORG, GITHUB_TOKEN_SECRET_NAME } from "../../lib/constants"
 import { toValidConstructName } from "../../lib/util"
 import { MoneyTags, MoneyTagType } from "../../tags/tags"
 import { MoneyRoleBuilder } from "../money-role-builder"
@@ -70,7 +70,8 @@ const buildKongDockerBuildSpec = (params: KongDockerBuildProps): BuildSpec => {
     account: params.account,
     environment: params.environment,
     propertiesFilePath: params.propertiesFilePath,
-    repositoryName: params.repositoryName
+    repositoryName: params.repositoryName,
+    githubOrgName: GITHUB_ORG
   } 
 
   const buildSpec = BuildSpec.fromObject({

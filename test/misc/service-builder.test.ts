@@ -1,16 +1,15 @@
 import { strictEqual } from 'assert';
-import { JavaService } from '../../misc/service';
-import { ServiceBuilder } from '../../misc/service-builder';
+import { ENV_DEV } from '../../lib/constants';
+import { ServiceBuilder } from '../../service/service-builder';
 
 describe('Service builder tests', () => {
   test('Read yml config', () => {
-    const services = ServiceBuilder.buildJavaServices()
-    strictEqual(services.length, 1)
+    const services = ServiceBuilder.buildServices(ENV_DEV)
+    strictEqual(services.length, 45)
   })
 
   test('yml service can be cast to TS Service', () => {
-    const services = ServiceBuilder.buildJavaServices()
-    const javaService:JavaService = services[0]
-    strictEqual(javaService.name, 'pfm-services')
+    const services = ServiceBuilder.buildServices(ENV_DEV)
+    strictEqual(services[0].name, 'authentication-services')
   })
 })

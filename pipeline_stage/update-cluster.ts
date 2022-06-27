@@ -2,7 +2,7 @@ import { BuildSpec, PipelineProject } from "aws-cdk-lib/aws-codebuild";
 import { Artifact } from "aws-cdk-lib/aws-codepipeline";
 import { CodeBuildAction } from "aws-cdk-lib/aws-codepipeline-actions";
 import { Construct } from "constructs";
-import { CommonCommands } from "../lib/commands";
+import { Shell } from "../lib/shell";
 import { CODE_BUILD_SPEC_VERSION, DEFAULT_CODE_BUILD_ENVIRONMENT, ENV_PRE, GITHUB_ORG, GITHUB_TOKEN_SECRET_NAME } from "../lib/constants";
 import { toValidConstructName } from "../lib/util";
 import { MoneyRoleBuilder } from "./money-role-builder";
@@ -46,14 +46,14 @@ const updateClusterSpec = (props: parameters): BuildSpec => {
       install: {
         'runtime-versions': {},
         commands: [
-          ...CommonCommands.installYq(),
+          ...Shell.installYq(),
         ]
       },
       build: {
         commands: [
           'VERSION=$(cat VERSION)',
           'echo $VERSION',
-          ...CommonCommands.updateCluster(props.repositoryName, props.deployEnv, props.githubOrg)
+          ...Shell.updateCluster(props.repositoryName, props.deployEnv, props.githubOrg)
         ]
       }
     },

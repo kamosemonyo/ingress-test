@@ -6,7 +6,7 @@ import { Subnet, SubnetType, Vpc } from "aws-cdk-lib/aws-ec2";
 import { Effect, PolicyStatement, Role, ServicePrincipal } from "aws-cdk-lib/aws-iam";
 import { Service } from "cdk8s-plus-17";
 import { Construct } from "constructs";
-import { CommonCommands } from "../lib/commands";
+import { Shell } from "../lib/shell";
 import { ACCOUNT_PRE, CODE_BUILD_SPEC_VERSION, CODE_BUILD_VPC_NAME } from "../lib/constants";
 import { MoneyTags } from "../tags/tags";
 
@@ -76,14 +76,14 @@ export class IngressTestStack extends Stack {
             phases: {
                 install: {
                   commands: [
-                    ...CommonCommands.installKubectl(),
-                    ...CommonCommands.installJq
+                    ...Shell.installKubectl(),
+                    ...Shell.installJq
                   ]
                 },
                 build: {
                   commands: [
                     'ls ',
-                    ...CommonCommands.assumeAwsRole('arn:aws:iam::737245153745:role/eks-deploy'),
+                    ...Shell.assumeAwsRole('arn:aws:iam::737245153745:role/eks-deploy'),
                     'aws eks update-kubeconfig --name non-prod --region af-south-1',
                     `kubectl apply -f ingress.yaml`
                   ]

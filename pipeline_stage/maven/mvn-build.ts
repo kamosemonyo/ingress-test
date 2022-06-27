@@ -5,7 +5,7 @@ import { BuildSpec, PipelineProject } from 'aws-cdk-lib/aws-codebuild';
 import { Artifact } from 'aws-cdk-lib/aws-codepipeline';
 
 import { toValidConstructName } from '../../lib/util';
-import { CommonCommands } from '../../lib/commands';
+import { Shell } from '../../lib/shell';
 
 import * as consts from '../../lib/constants';
 import { MoneyRoleBuilder } from '../money-role-builder';
@@ -85,7 +85,7 @@ const buildMavenDockerBuildSpec = (params: MavenDockerBuildProps): BuildSpec => 
           'java -version',
           'mvn -version',
           // Create ~/.m2/settings.xml file
-          ...CommonCommands.setupMvnSettings(params.region),
+          ...Shell.setupMvnSettings(params.region),
           `export ROLLBACK_VERSION=$(mvn org.apache.maven.plugins:maven-help-plugin:2.1.1:evaluate -Dexpression=project.version | sed -n -e '/^\\[.*\\]/ !{ /^[0-9]/ { p; q } }')`,
           `echo "Resolved current version $ROLLBACK_VERSION"`,
           'echo $ROLLBACK_VERSION > ROLLBACK_VERSION',
@@ -192,8 +192,8 @@ const buildMavenDeployBuildSpec = (params: deployJobParams): BuildSpec => {
     phases: {
       install: {
         commands: [
-          ...CommonCommands.installKubectl(),
-          ...CommonCommands.installYq(),
+          ...Shell.installKubectl(),
+          ...Shell.installYq(),
         ]
       },
       build: {
@@ -294,7 +294,7 @@ const createMavenReleaseProject = (scope: Construct, params: releaseParams): Pip
       phases: {
         install: {
           commands: [
-            ... CommonCommands.installYq()
+            ... Shell.installYq()
           ]
         },
         build: {

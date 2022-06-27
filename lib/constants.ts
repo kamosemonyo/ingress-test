@@ -45,6 +45,9 @@ export const MAVEN_TEMPLATE:string = 'maven'
 export const KONG_TEMPLATE:string = 'kong'
 export const DOCKER_TEMPLATE:string = 'docker'
 
+export const RELEASE_VERSION:string = 'VERSION'
+export const DEV_VERSION:string = 'SNAPSHOT_VERSION'
+
 export const KONG_DEV_TAG:string = 'SNAPSHOT_VERSION'
 export const KONG_PRE_TAG:string = 'PRE_VERSION'
 export const KONG_PROD_TAG:string = 'PROD_VERSION'

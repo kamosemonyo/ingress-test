@@ -1,0 +1,28 @@
+  
+---
+# Headless services do not expose a load balanced dns name in the clusterIP
+# Rather the IP's are encoded as SRV records in DNS.
+# Kong makes use of this to learn which pods are behind a service
+apiVersion: v1
+kind: Service
+metadata:
+  name: $service-headless
+  labels:
+    project: momentum-money
+    app: $service
+    target-deployment: $deployment
+spec:
+  selector:
+    app.kubernetes.io/instance: $deployment
+  ports:
+  - name: http
+    port: 8080
+    protocol: TCP
+  - name: https
+    port: 8443
+    protocol: TCP
+  - name: management
+    port: 9990
+    protocol: TCP
+  clusterIP: None
+  type: ClusterIP

@@ -7,7 +7,17 @@ const YQ_BINARY = 'yq_linux_amd64'
 const CLUSTER_REPO = 'aws-eks';
 const CLUSTER_YML_CONFIG_PATH = 'cluster/services.yml';
 
-export class CommonCommands {
+interface KubeEnvProps {
+  account:string,
+  region:string,
+  namespace:string,
+  service:string,
+  version:string,
+  hostname?:string,
+  path?:string
+}
+
+export class Shell {
   static installCdkCmd: string[] = [
     'echo "Installing AWS CDK"',
     'npm install -g aws-cdk@1.122.0 typescript',
@@ -82,6 +92,75 @@ export class CommonCommands {
       "export AWS_SESSION_TOKEN=$(echo $OUT | jq -r '.Credentials''.SessionToken')",
       'aws sts get-caller-identity',
     ]
+  }
+
+  static s3DownloadFolder (bucketName:string, destination:string) {
+    return `aws s3 sync s3://${bucketName} ${destination}/`
+  }
+
+  static setDeploymentEnvs (props:KubeEnvProps):string[] {
+    const path = (props.path !== undefined) ? props.path : props.service
+    const deployment = props.service + `-$(echo $${props.version})`
+    const dockerImage = `${props.account}.dkr.ecr.${props.region}.amazonaws.com/${props.service}:$${props.version}`
+
+    const commands = [
+      Shell.setEnvironmentVar('namespace', props.namespace),
+      Shell.setEnvironmentVar('service', props.service),
+      Shell.setEnvironmentVar('service-headless', props.service.concat('-service-hl')),
+      Shell.setEnvironmentVar('deployment', deployment),
+      Shell.setEnvironmentVar('path', path),
+      Shell.setEnvironmentVar('docker_image', dockerImage),
+    ]
+
+    if (props.hostname !== undefined) {
+      commands.push(Shell.setEnvironmentVar('hostname', props.hostname))
+    }
+
+    return commands
+  }
+
+  static setNamespaceEnv (value:string) {
+    return Shell.setEnvironmentVar('namespace', value)
+  }
+
+  static setServiceEnv (value:string) {
+    return Shell.setEnvironmentVar('service', value)
+  }
+
+  static setHeadlessServiceEnv (value:string) {
+    return Shell.setEnvironmentVar('service-headless', value)
+  }
+
+  static setDeploymentEnv (value:string) {
+    return Shell.setEnvironmentVar('deployment', value)
+  }
+
+  static setHostnameEnv (value:string) {
+    return Shell.setEnvironmentVar('hostname', value)
+  }
+
+  static setDockerImageEnv (value:string) {
+    return Shell.setEnvironmentVar('docker_image', value)
+  }
+
+  static setEnvironmentVar(varname:string, value:string) {
+    return `${varname}=${value}`
+  }
+
+  static replaceEnvPlaceHolderValues (filepath:string) {
+    return `eval "echo \\"$(cat ${filepath})\\"" > ${filepath}`
+  }
+
+  static createImage (account:string, region:string, service:string, versionTag:string) {
+    return `${account}.dkr.ecr.${region}.amazonaws.com/${service}:$${versionTag}`
+  }
+
+  static createDeployment (repositoryName:string, version:string) {
+    return repositoryName + `-$(echo $${version})`
+  }
+
+  static printFileContents (filepath:string) {
+    return `cat ${filepath}`
   }
 };
 

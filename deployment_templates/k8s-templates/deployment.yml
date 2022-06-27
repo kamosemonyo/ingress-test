@@ -1,0 +1,471 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: $deployment
+  labels:
+    project: momentum-money
+    app: $service
+spec:
+  replicas: $replicas
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: $deployment
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: $service
+        app.kubernetes.io/instance: $deployment
+        app.kubernetes.io/version: $version
+        app.kubernetes.io/component: microservice
+      annotations:
+        co.elastic.logs/multiline.pattern: '^\t.*'
+        co.elastic.logs/multiline.negate: "true"
+        co.elastic.logs/multiline.match: after
+        prometheus.io/path: /metrics
+        prometheus.io/port: "8080"
+        prometheus.io/scheme: http
+        prometheus.io/scrape: "true"
+    spec:
+      containers:
+      - name: $deployment
+        image: $docker_image
+        readinessProbe:
+          httpGet:
+            path: /$path
+            port: 8080
+          initialDelaySeconds: 120
+          timeoutSeconds: 10
+          periodSeconds: 25
+          successThreshold: 1
+          failureThreshold: 10
+        livenessProbe:
+          httpGet:
+            path: /$path
+            port: 8080
+          failureThreshold: 3
+          initialDelaySeconds: 600
+          timeoutSeconds: 10
+          periodSeconds: 20
+        imagePullPolicy: Always
+        # volumeMounts:
+        # - name: efs-ps
+        #   mountPath: /opt/wildfly/standalone/data
+        securityContext:
+          #Block process in container from running as root
+          runAsNonRoot: true
+          #The UID that the process should run as
+          runAsUser: 431
+          runAsGroup: 433
+          #Force the root filesystem is read only
+          #readOnlyRootFilesystem: true
+          allowPrivilegeEscalation: false
+          #Drop all Linux kernel capabilities
+          capabilities:
+            drop: 
+            - all
+        env:
+        - name: "MMI_ENV"
+          value: $env
+        - name: "TZ"
+          value: Africa/Johannesburg
+        - name: "BUILDNUMBER"
+          value: version
+        - name: "IMAGENAME"
+          value: project
+        - name: "oauth_sharedsecret"
+          valueFrom:
+            secretKeyRef:
+              name: momentum-money
+              key: oauth_sharedsecret
+              optional: true
+        - name: "audit_allowedApplications"
+          valueFrom:
+            secretKeyRef:
+              name: momentum-money
+              key: audit_allowedApplications
+              optional: true
+        - name: "audit_signingprivatekeypassword"
+          valueFrom:
+            secretKeyRef:
+              name: momentum-money
+              key: audit_signingprivatekeypassword
+              optional: true
+        - name: "audit_signingprivatekeystorepassword"
+          valueFrom:
+            secretKeyRef:
+              name: momentum-money
+              key: audit_signingprivatekeystorepassword
+              optional: true
+        - name: "forensics_authorizationstring"
+          valueFrom:
+            secretKeyRef:
+              name: momentum-money
+              key: forensics_authorizationstring
+              optional: true
+        - name: "hazelcast_password"
+          valueFrom:
+            secretKeyRef:
+              name: momentum-money
+              key: hazelcast_password
+              optional: true
+        - name: "kong_credentials"
+          valueFrom:
+            secretKeyRef:
+              name: momentum-money
+              key: kong_credentials
+              optional: true
+        - name: "kong_admin_credentials"
+          valueFrom:
+            secretKeyRef:
+              name: momentum-money
+              key: kong_admin_credentials
+              optional: true
+        - name: "momentum_credentials"
+          valueFrom:
+            secretKeyRef:
+              name: momentum-money
+              key: momentum_credentials
+              optional: true
+        - name: "momentum_points_feed_password"
+          valueFrom:
+            secretKeyRef:
+              name: momentum-money
+              key: momentum_points_feed_password
+              optional: true
+        - name: "momentum_points_feed_username"
+          valueFrom:
+            secretKeyRef:
+              name: momentum-money
+              key: momentum_points_feed_username
+              optional: true
+        - name: "retailsts_authorizationstring"
+          valueFrom:
+            secretKeyRef:
+              name: momentum-money
+              key: retailsts_authorizationstring
+              optional: true
+        - name: "sso_keystorepassword"
+          valueFrom:
+            secretKeyRef:
+              name: momentum-money
+              key: sso_keystorepassword
+              optional: true
+        - name: "transactionverificationservice_authorizationstring"
+          valueFrom:
+            secretKeyRef:
+              name: momentum-money
+              key: transactionverificationservice_authorizationstring
+              optional: true
+        - name: "wallet_mongo_password"
+          valueFrom:
+            secretKeyRef:
+              name: momentum-money
+              key: wallet_mongo_password
+              optional: true
+        - name: "audit_mongo_password"
+          valueFrom:
+            secretKeyRef:
+              name: momentum-money
+              key: audit_mongo_password
+              optional: true
+        - name: "money_settings_provider_mongo_password"
+          valueFrom:
+            secretKeyRef:
+              name: momentum-money
+              key: money_settings_provider_mongo_password
+              optional: true
+        - name: "traderoot_soap_password"
+          valueFrom:
+            secretKeyRef:
+              name: momentum-money
+              key: traderoot_soap_password
+              optional: true
+        - name: "inbox_mongo_password"
+          valueFrom:
+            secretKeyRef:
+              name: momentum-money
+              key: inbox_mongo_password
+              optional: true
+        - name: "info_mongo_password"
+          valueFrom:
+            secretKeyRef:
+              name: momentum-money
+              key: info_mongo_password
+              optional: true
+        - name: "setting_provider_client_authorization"
+          valueFrom:
+            secretKeyRef:
+              name: momentum-money
+              key: setting_provider_client_authorization
+              optional: true
+        - name: "aws_notificationservices_client_id"
+          valueFrom:
+            secretKeyRef:
+              name: momentum-money
+              key: aws_notificationservices_client_id
+              optional: true
+        - name: "aws_notificationservices_client_secret"
+          valueFrom:
+            secretKeyRef:
+              name: momentum-money
+              key: aws_notificationservices_client_secret
+              optional: true
+        - name: "aws_pfmservices_client_id"
+          valueFrom:
+            secretKeyRef:
+              name: momentum-money
+              key: aws_pfmservices_client_id
+              optional: true
+        - name: "aws_pfmservices_client_secret"
+          valueFrom:
+            secretKeyRef:
+              name: momentum-money
+              key: aws_pfmservices_client_secret
+              optional: true
+        - name: "aws_moneymanagementforensics_client_id"
+          valueFrom:
+            secretKeyRef:
+              name: momentum-money
+              key: aws_moneymanagementforensics_client_id
+              optional: true
+        - name: "aws_moneymanagementforensics_client_secret"
+          valueFrom:
+            secretKeyRef:
+              name: momentum-money
+              key: aws_moneymanagementforensics_client_secret
+              optional: true
+        - name: "money_services_pfm_sync_user_id"
+          valueFrom:
+            secretKeyRef:
+              name: momentum-money
+              key: money_services_pfm_sync_user_id
+              optional: true
+        - name: "money_services_pfm_sync_user_password"
+          valueFrom:
+            secretKeyRef:
+              name: momentum-money
+              key: money_services_pfm_sync_user_password
+              optional: true
+        - name: "kong_consumer_batch_client_id"
+          valueFrom:
+            secretKeyRef:
+              name: momentum-money
+              key: kong_consumer_batch_client_id
+              optional: true             
+        - name: "aws_documents_services_client_id"
+          valueFrom:
+            secretKeyRef:
+              name: momentum-money
+              key: aws_documents_services_client_id
+              optional: true
+        - name: "aws_documents_services_client_secret"
+          valueFrom:
+            secretKeyRef:
+              name: momentum-money
+              key: aws_documents_services_client_secret
+              optional: true
+        - name: "kong_consumer_batch_client_secret"
+          valueFrom:
+            secretKeyRef:
+              name: momentum-money
+              key: kong_consumer_batch_client_secret
+              optional: true
+        - name: "CCD_sftpuser"
+          valueFrom:
+            secretKeyRef:
+              name: momentum-money
+              key: CCD_sftpuser
+              optional: true
+        - name: "CCD_sftphost"
+          valueFrom:
+            secretKeyRef:
+              name: momentum-money
+              key: CCD_sftphost
+              optional: true
+        - name: "CCD_sftppassword"
+          valueFrom:
+            secretKeyRef:
+              name: momentum-money
+              key: CCD_sftppassword
+              optional: true
+        - name: "CCD_uploadUser"
+          valueFrom:
+            secretKeyRef:
+              name: momentum-money
+              key: CCD_uploadUser
+              optional: true
+        - name: "aws_transaction_event_services_client_id"
+          valueFrom:
+            secretKeyRef:
+              name: momentum-money
+              key: aws_transaction_event_services_client_id
+              optional: true
+        - name: "aws_transaction_event_services_client_secret"
+          valueFrom:
+            secretKeyRef:
+              name: momentum-money
+              key: aws_transaction_event_services_client_secret
+              optional: true
+        - name: "aws_pfm_databridge_services_client_id"
+          valueFrom:
+            secretKeyRef:
+              name: momentum-money
+              key: aws_pfm_databridge_services_client_id
+              optional: true
+        - name: "aws_pfm_databridge_services_client_secret"
+          valueFrom:
+            secretKeyRef:
+              name: momentum-money
+              key: aws_pfm_databridge_services_client_secret
+              optional: true
+        - name: "aws_authenticationservices_client_id"
+          valueFrom:
+            secretKeyRef:
+              name: momentum-money
+              key: aws_authenticationservices_client_id
+              optional: true
+        - name: "aws_authenticationservices_client_secret"
+          valueFrom:
+            secretKeyRef:
+              name: momentum-money
+              key: aws_authenticationservices_client_secret
+              optional: true      
+        - name: "auth_mongoUser"
+          valueFrom:
+            secretKeyRef:
+              name: momentum-money
+              key: auth_mongoUser
+              optional: true
+        - name: "auth_mongoPassword"
+          valueFrom:
+            secretKeyRef:
+              name: momentum-money
+              key: auth_mongoPassword
+              optional: true     
+        - name: "aws_transactionlistener_client_id"
+          valueFrom:
+            secretKeyRef:
+              name: momentum-money
+              key: aws_transactionlistener_client_id
+              optional: true
+        - name: "aws_transactionlistener_client_secret"
+          valueFrom:
+            secretKeyRef:
+              name: momentum-money
+              key: aws_transactionlistener_client_secret
+              optional: true        
+        - name: "aws_transactionservices_client_id"
+          valueFrom:
+            secretKeyRef:
+              name: momentum-money
+              key: aws_transactionservices_client_id
+              optional: true
+        - name: "aws_transactionservices_client_secret"
+          valueFrom:
+            secretKeyRef:
+              name: momentum-money
+              key: aws_transactionservices_client_secret
+              optional: true               
+        - name: "bankservservices_mongodb_password"
+          valueFrom:
+            secretKeyRef:
+              name: momentum-money
+              key: bankservservices_mongodb_password
+              optional: true
+        - name: "retailClientUsername"
+          valueFrom:
+            secretKeyRef:
+              name: momentum-money
+              key: retailClientUsername
+              optional: true               
+        - name: "retailClientPassword"
+          valueFrom:
+            secretKeyRef:
+              name: momentum-money
+              key: retailClientPassword
+              optional: true               
+        - name: "aws_ussdservices_client_id"
+          valueFrom:
+            secretKeyRef:
+              name: momentum-money
+              key: aws_ussdservices_client_id
+              optional: true               
+        - name: "aws_ussdservices_client_secret"
+          valueFrom:
+            secretKeyRef:
+              name: momentum-money
+              key: aws_ussdservices_client_secret
+              optional: true    
+        - name: "aws_paymentservices_client_id"
+          valueFrom:
+            secretKeyRef:
+              name: momentum-money
+              key: aws_paymentservices_client_id
+              optional: true
+        - name: "aws_paymentservices_client_secret"
+          valueFrom:
+            secretKeyRef:
+              name: momentum-money
+              key: aws_paymentservices_client_secret
+              optional: true
+        - name: "mongo_password"
+          valueFrom:
+            secretKeyRef:
+              name: momentum-money
+              key: mongo_password
+              optional: true    
+        - name: "aws_sftpmonitorservices_client_id"
+          valueFrom:
+            secretKeyRef:
+              name: momentum-money
+              key: aws_sftpmonitorservices_client_id
+              optional: true                                    
+        - name: "aws_sftpmonitorservices_client_secret"
+          valueFrom:
+            secretKeyRef:
+              name: momentum-money
+              key: aws_sftpmonitorservices_client_secret
+              optional: true
+        - name: "retail_password"
+          valueFrom:
+            secretKeyRef:
+              name: momentum-money
+              key: retail_password
+              optional: true
+        - name: "retail_username"
+          valueFrom:
+            secretKeyRef:
+              name: momentum-money
+              key: retail_username
+              optional: true
+        - name: "itouch_user_id"
+          valueFrom:
+            secretKeyRef:
+              name: momentum-money
+              key: itouch_user_id
+              optional: true
+        - name: "itouch_password"
+          valueFrom:
+            secretKeyRef:
+              name: momentum-money
+              key: itouch_password
+              optional: true
+        ports:
+        - containerPort: 8080
+          name: http
+          protocol: TCP
+        - containerPort: 8443
+          name: https
+          protocol: TCP
+        resources:
+          limits:
+            cpu: 750m
+            memory: 768M
+          requests:
+            cpu: 30m
+            memory: 768M
+      volumes:
+        - name: efs-ps
+          persistentVolumeClaim:
+            claimName: efs-claim

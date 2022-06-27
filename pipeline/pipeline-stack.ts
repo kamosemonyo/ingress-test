@@ -1,7 +1,7 @@
 import { Construct } from "constructs";
 import { Account } from "../lib/account";
 import { KONG_TEMPLATE, MAVEN_TEMPLATE } from "../lib/constants";
-import { Service } from "../misc/service";
+import { Service } from "../service/service";
 import { KongPipelineStack } from "./kong-pipeline";
 import { MavenPipelineStack } from "./maven-pipeline";
 

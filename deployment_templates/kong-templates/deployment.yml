@@ -1,0 +1,80 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: $deployment
+  namespace: $namespace
+  labels:
+    app: $deployment
+    service: $service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: $deployment
+      app.kubernetes.io/component: api_gateway
+      app.kubernetes.io/instance: $deployment
+      app.kubernetes.io/managed-by: ansible
+      app.kubernetes.io/name: $service
+      app.kubernetes.io/part-of: banking
+      app.kubernetes.io/version: kongversion_small
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: $deployment
+        app.kubernetes.io/component: api_gateway
+        app.kubernetes.io/instance: $deployment
+        app.kubernetes.io/managed-by: ansible
+        app.kubernetes.io/name: $service
+        app.kubernetes.io/part-of: banking
+        app.kubernetes.io/version: kongversion_small
+      annotations:
+        prometheus.io/path: /metrics
+        prometheus.io/port: '8001'
+        prometheus.io/scheme: http
+        prometheus.io/scrape: 'true'
+    spec:
+      containers:
+        - name: kong
+          image: $docker_image
+          ports:
+            - name: admin
+              containerPort: 8001
+              protocol: TCP
+            - name: proxy
+              containerPort: 8000
+              protocol: TCP
+            - name: proxy-ssl
+              containerPort: 8443
+              protocol: TCP
+            - name: admin-ssl
+              containerPort: 8444
+              protocol: TCP
+          env:
+            - name: KONG_DATABASE
+              value: 'off'
+            - name: KONG_DECLARATIVE_CONFIG
+              value: /usr/local/kong/kong_mmi.yml
+            - name: KONG_PROXY_ACCESS_LOG
+              value: /dev/stdout
+            - name: KONG_ADMIN_ACCESS_LOG
+              value: /dev/stdout
+            - name: KONG_PROXY_ERROR_LOG
+              value: /dev/stderr
+            - name: KONG_ADMIN_ERROR_LOG
+              value: /dev/stderr
+            - name: KONG_SERVER_TOKENS
+              value: 'off'
+            - name: KONG_REAL_IP_HEADER
+              value: X-Forwarded-For
+            - name: KONG_REAL_IP_RECURSIVE
+              value: 'on'
+            - name: KONG_CLIENT_MAX_BODY_SIZE
+              value: 50m
+          resources:
+            limits:
+              cpu: 100m
+              memory: 525Mi
+            requests:
+              cpu: 50m
+              memory: 512Mi

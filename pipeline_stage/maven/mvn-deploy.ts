@@ -5,7 +5,7 @@ import { Artifact } from 'aws-cdk-lib/aws-codepipeline';
 import { toValidConstructName } from '../../lib/util';
 import { CODE_BUILD_SPEC_VERSION, DEFAULT_CODE_BUILD_ENVIRONMENT, EKS_DEPLOY_ROLE, MAIN_GIT_BRANCH, NEXUS_REPOSITORY } from '../../lib/constants';
 import { IVpc } from 'aws-cdk-lib/aws-ec2';
-import { CommonCommands } from '../../lib/commands';
+import { Shell } from '../../lib/shell';
 import { IPrincipal } from 'aws-cdk-lib/aws-iam';
 
 interface parameters {
@@ -52,20 +52,20 @@ const buildMavenDeploySpec = (params: parameters): BuildSpec => {
           java: 'corretto8'
         },
         commands: [
-          ...CommonCommands.installYq(),
+          ...Shell.installYq(),
         ]
       },
       build: {
         commands: [
           'java -version',
           'mvn -version',
-          ...CommonCommands.setupMvnSettings(params.ssmRegion),
+          ...Shell.setupMvnSettings(params.ssmRegion),
           'mvn deploy',
         ]
       },
       post_build: {
         commands: [
-          ...CommonCommands.assumeAwsRole(EKS_DEPLOY_ROLE),
+          ...Shell.assumeAwsRole(EKS_DEPLOY_ROLE),
           'aws eks update-kubeconfig --name non-prod --region af-south-1',
           `kubectl apply -f ingress.yaml`
         ]
