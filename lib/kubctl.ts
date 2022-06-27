@@ -1,8 +1,9 @@
 
 export class Kubectl {
 
-  static login () {
-    return 'aws eks update-kubeconfig --name non-prod --region af-south-1'
+  static login (clusterName:string, region?:string) {
+    const clusterRegion = (region == undefined) ? 'af-south-1': region
+    return `aws eks update-kubeconfig --name ${clusterName} --region ${clusterRegion}`
   }
 
   static applyFolder (folder:string) {

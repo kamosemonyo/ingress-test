@@ -6,8 +6,9 @@ import { Construct } from "constructs"
 import { CODE_BUILD_SPEC_VERSION, DEFAULT_CODE_BUILD_ENVIRONMENT, GITHUB_ORG, GITHUB_TOKEN_SECRET_NAME } from "../../lib/constants"
 import { toValidConstructName } from "../../lib/util"
 import { MoneyTags, MoneyTagType } from "../../tags/tags"
+import { K8sDeployProps } from "../k8sdeploy"
 import { MoneyRoleBuilder } from "../money-role-builder"
-import { kongBuildImageCommand, KongCommandProps, kongDeployImageCommand, kongDeployToK8s, kongVersionCommand } from "./kong-commands"
+import { kongBuildImageCommand, kongDeployImageCommand, kongDeployToK8s, kongVersionCommand } from "./kong-commands"
 
 
 interface KongDockerBuildProps {
@@ -66,7 +67,7 @@ const kongDeployImageSpec = (params: KongDockerBuildProps): BuildSpec => {
     throw Error(`host not provided for ${params.repositoryName}`)
   }
 
-  const buildCommandParams:KongCommandProps = {
+  const buildCommandParams:K8sDeployProps = {
     account: params.account,
     environment: params.environment,
     propertiesFilePath: params.propertiesFilePath,

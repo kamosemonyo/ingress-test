@@ -1,12 +1,12 @@
 import { Construct  } from "constructs";
-import { CfnParameter, RemovalPolicy, Stack, StackProps, TagType } from "aws-cdk-lib";
+import { CfnParameter, RemovalPolicy, Stack, StackProps } from "aws-cdk-lib";
 import { aws_s3 as s3 } from 'aws-cdk-lib';
 import { aws_codepipeline as codepipeline } from "aws-cdk-lib";
 import { aws_ec2 as ec2 } from "aws-cdk-lib";
 import { getSourceAction } from "../pipeline_stage/code-source";
-import { toValidConstructName } from "../lib/util";
-import { CODE_BUILD_VPC_NAME, ENV_DEV, ENV_PRE, ENV_PROD, MAIN_GIT_BRANCH } from "../lib/constants";
-import { createMavenDockerBuildAction } from "../pipeline_stage/maven/mvn-build";
+import { getClusterName, toValidConstructName } from "../lib/util";
+import { ACCOUNT_PRE, CODE_BUILD_VPC_NAME, ENV_DEV, ENV_PRE, ENV_PROD, MAIN_GIT_BRANCH } from "../lib/constants";
+import { createMavenDeployAction, createMavenDockerBuildAction } from "../pipeline_stage/maven/mvn-build";
 import { Effect, PolicyStatement } from "aws-cdk-lib/aws-iam";
 import { updateClusterProject } from "../pipeline_stage/update-cluster";
 import { ManualApprovalAction } from "aws-cdk-lib/aws-codepipeline-actions";
@@ -119,20 +119,20 @@ export class MavenPipelineStack extends Stack {
       ],
     });
 
-    pipeline.addStage({
-      stageName: 'Deploy_Dev',
-      actions: [
-        updateClusterProject(this, {
-          input: buildOutputArtifact,
-          account: Stack.of(this).account,
-          region: Stack.of(this).region,
-          branch: branch,
-          githubOrg: githubOrgParam.valueAsString,
-          repositoryName: repositoryName,
-          deployEnv: ENV_DEV
-        })
-      ]
-    });
+    // pipeline.addStage({
+    //   stageName: 'Deploy_Dev',
+    //   actions: [
+    //     updateClusterProject(this, {
+    //       input: buildOutputArtifact,
+    //       account: Stack.of(this).account,
+    //       region: Stack.of(this).region,
+    //       branch: branch,
+    //       githubOrg: githubOrgParam.valueAsString,
+    //       repositoryName: repositoryName,
+    //       deployEnv: ENV_DEV
+    //     })
+    //   ]
+    // });
 
     pipeline.addStage({
       stageName: 'Promote_To_Pre-production',
@@ -144,16 +144,17 @@ export class MavenPipelineStack extends Stack {
     });
 
     pipeline.addStage({
-      stageName: 'Deploy_To_Pre-production',
+      stageName: 'Deploy_Pre-production',
       actions: [
-        updateClusterProject(this, {
-          input: buildOutputArtifact,
-          account: Stack.of(this).account,
-          region: Stack.of(this).region,
-          branch: branch,
-          githubOrg: githubOrgParam.valueAsString,
-          repositoryName: repositoryName,
-          deployEnv: ENV_PRE
+        createMavenDeployAction(this, {
+          inputArtifact: buildOutputArtifact,
+          clusterName: getClusterName(ENV_PRE),
+          account: ACCOUNT_PRE,
+          branch: MAIN_GIT_BRANCH,
+          environment: ENV_PRE,
+          replicas: props.replicas,
+          repositoryName: props.repositoryName,
+          vpc: vpc
         })
       ]
     });
@@ -170,14 +171,15 @@ export class MavenPipelineStack extends Stack {
     pipeline.addStage({
       stageName: 'Deploy_Prod',
       actions: [
-        updateClusterProject(this, {
-          input: buildOutputArtifact,
+        createMavenDeployAction(this, {
+          inputArtifact: buildOutputArtifact,
           account: Stack.of(this).account,
-          region: Stack.of(this).region,
           branch: branch,
-          githubOrg: githubOrgParam.valueAsString,
           repositoryName: repositoryName,
-          deployEnv: ENV_PROD
+          environment: ENV_PROD,
+          clusterName: getClusterName(ENV_PROD),
+          replicas: props.replicas,
+          vpc: vpc
         })
       ]
     });

@@ -1,4 +1,4 @@
-import { NEXUS_REPOSITORY, NEXUS_PASSWORD_SSM_KEY, NEXUS_USERNAME_SSM_KEY } from "./constants";
+import { NEXUS_REPOSITORY, NEXUS_PASSWORD_SSM_KEY, NEXUS_USERNAME_SSM_KEY, ECR_REGION } from "./constants";
 
 const GH_VERSION = '2.4.0';
 const KUBECTL_VERSION = '1.15.0';
@@ -98,10 +98,26 @@ export class Shell {
     return `aws s3 sync s3://${bucketName} ${destination}/`
   }
 
+  static ecrLogin (account:string) {
+    return `aws ecr get-login-password --region ${ECR_REGION} | docker login --username AWS --password-stdin ${account}.dkr.ecr.${ECR_REGION}.amazonaws.com`
+  }
+
+  static buildDockerImage (account:string, repositoryName:string, version:string) {
+    return  `docker build -t ${Shell.toDockerImage(account, repositoryName, version)} .`
+  }
+
+  static dockerPush (account:string, repositoryName:string, version:string) {
+    return `docker push ${Shell.toDockerImage(account, repositoryName, version)}`
+  }
+
+  static toDockerImage (account:string, repositoryName:string, version:string) {
+    return `${account}.dkr.ecr.${ECR_REGION}.amazonaws.com/${repositoryName}:$${version}`
+  }
+
   static setDeploymentEnvs (props:KubeEnvProps):string[] {
     const path = (props.path !== undefined) ? props.path : props.service
     const deployment = props.service + `-$(echo $${props.version})`
-    const dockerImage = `${props.account}.dkr.ecr.${props.region}.amazonaws.com/${props.service}:$${props.version}`
+    const dockerImage = Shell.toDockerImage(props.account, props.service, props.version)
 
     const commands = [
       Shell.setEnvironmentVar('namespace', props.namespace),

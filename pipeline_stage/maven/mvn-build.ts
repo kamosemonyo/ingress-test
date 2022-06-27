@@ -4,7 +4,7 @@ import { CodeBuildAction, CodeBuildActionProps } from "aws-cdk-lib/aws-codepipel
 import { BuildSpec, PipelineProject } from 'aws-cdk-lib/aws-codebuild';
 import { Artifact } from 'aws-cdk-lib/aws-codepipeline';
 
-import { toValidConstructName } from '../../lib/util';
+import { getServiceTagVersion, toValidConstructName } from '../../lib/util';
 import { Shell } from '../../lib/shell';
 
 import * as consts from '../../lib/constants';
@@ -67,6 +67,8 @@ const createMavenDockerBuildProject = (scope: Construct, params: MavenDockerBuil
 }
 
 const buildMavenDockerBuildSpec = (params: MavenDockerBuildProps): BuildSpec => {
+  const serviceTagVersion = getServiceTagVersion(params.environment)
+
   const buildSpec = BuildSpec.fromObject({
     version: consts.CODE_BUILD_SPEC_VERSION,
     env: {
@@ -97,11 +99,11 @@ const buildMavenDockerBuildSpec = (params: MavenDockerBuildProps): BuildSpec => 
       build: {
         commands: [
           'mvn clean install',
-          `export SNAPSHOT_VERSION=\`grep -oP \'version=\\K.*\' ${params.propertiesFilePath}\``,
-          `echo "current new snapshot version $SNAPSHOT_VERSION"`,
+          `export ${consts.DEV_VERSION}=\`grep -oP \'version=\\K.*\' ${params.propertiesFilePath}\``,
+          `echo "current new snapshot version $${consts.DEV_VERSION}"`,
           'export VERSION=$(echo ${SNAPSHOT_VERSION} |awk -F "-" \'{print $1}\')',
           'echo "Resolved new version $VERSION"',
-          'echo $VERSION > VERSION',
+          `echo $${consts.RELEASE_VERSION} > VERSION`,
           `cp ${params.propertiesFilePath} docker/files`,
           // Deploy Maven artifacts for version
           // 'mvn deploy',
@@ -110,9 +112,9 @@ const buildMavenDockerBuildSpec = (params: MavenDockerBuildProps): BuildSpec => 
       post_build: {
         commands: [
           // Build and push docker image for version snapshot
-          `aws ecr get-login-password --region ${consts.ECR_REGION} | docker login --username AWS --password-stdin ${params.account}.dkr.ecr.${consts.ECR_REGION}.amazonaws.com`,
-          `docker build -t ${params.account}.dkr.ecr.${consts.ECR_REGION}.amazonaws.com/${params.repositoryName}:$SNAPSHOT_VERSION -t ${params.account}.dkr.ecr.${consts.ECR_REGION}.amazonaws.com/${params.repositoryName}:$VERSION .`,
-          `docker push --all-tags ${params.account}.dkr.ecr.${consts.ECR_REGION}.amazonaws.com/${params.repositoryName}`,
+          Shell.ecrLogin(params.account),
+          Shell.buildDockerImage(params.account, params.repositoryName, serviceTagVersion),
+          Shell.dockerPush(params.account, params.repositoryName, serviceTagVersion)
         ]
       }
     },
@@ -137,10 +139,10 @@ interface deployJobParams {
   environment: string
   repositoryName: string
   account: string
-  replicas: string
+  replicas: Number
   clusterName: string
   inputArtifact: Artifact
-  extraInputs: Artifact[]
+  extraInputs?: Artifact[]
   outputs?: Artifact[]
 }
 

@@ -1,4 +1,4 @@
-import { DEV_VERSION, ENV_DEV, ENV_PRE, ENV_PROD, KONG_DEV_TAG, KONG_PRE_TAG, KONG_PROD_TAG, RELEASE_VERSION } from "./constants";
+import { DEV_VERSION, EKS_NON_PROD_CLUSTER_NAME, EKS_PROD_CLUSTER_NAME, ENV_DEV, ENV_PRE, ENV_PROD, KONG_DEV_TAG, KONG_PRE_TAG, KONG_PROD_TAG, RELEASE_VERSION } from "./constants";
 
 export const toValidConstructName = (id: string) => {
   let str = id.split('_').join('-');
@@ -24,4 +24,8 @@ export function getKongTagVersion (environment:string):string {
   } else {
     return KONG_DEV_TAG
   }
+}
+
+export function getClusterName (environment:string):string {
+  return (environment == ENV_PROD) ? EKS_PROD_CLUSTER_NAME: EKS_NON_PROD_CLUSTER_NAME
 }

@@ -1,20 +1,10 @@
 import { Shell } from "../../lib/shell"
 import { ECR_REGION, EKS_DEPLOY_ROLE, ENV_PRE, ENV_PROD, INGRESS_TEMPLATES_BUCKET_NAME, KONG_DEV_TAG, KONG_PRE_TAG, KONG_PROD_TAG } from "../../lib/constants"
 import { Kubectl } from "../../lib/kubctl"
-import { getKongTagVersion } from "../../lib/util"
+import { getClusterName, getKongTagVersion } from "../../lib/util"
+import { K8sDeployProps } from "../k8sdeploy"
 
-
-export interface KongCommandProps {
-    environment:string,
-    repositoryName:string,
-    account:string,
-    propertiesFilePath:string,
-    host?:string,
-    replicas?:Number
-    githubOrgName:string
-}
-
-export function kongVersionCommand (params:KongCommandProps, isVersionUpdating?:boolean) {
+export function kongVersionCommand (params:K8sDeployProps, isVersionUpdating?:boolean) {
   isVersionUpdating = (isVersionUpdating == undefined) ? false : isVersionUpdating
   
   return [
@@ -28,7 +18,7 @@ export function kongVersionCommand (params:KongCommandProps, isVersionUpdating?:
   ]
 }
 
-function updateKongVersion (params:KongCommandProps):string[] {
+function updateKongVersion (params:K8sDeployProps):string[] {
   return [
     'OLD_VERSION=$VERSION',
     'VERSION=$(($VERSION + 1))',
@@ -39,24 +29,24 @@ function updateKongVersion (params:KongCommandProps):string[] {
   ]
 }
 
-export function kongBuildImageCommand (params:KongCommandProps):string[] {
+export function kongBuildImageCommand (params:K8sDeployProps):string[] {
   const kongVersion = getKongTagVersion(params.environment)
   const kongEnvironment = getKongEnv(params.environment)
 
   return [
-    `aws ecr get-login-password --region ${ECR_REGION} | docker login --username AWS --password-stdin ${params.account}.dkr.ecr.${ECR_REGION}.amazonaws.com`,
+    Shell.ecrLogin(params.account),
     `docker build -t ${params.account}.dkr.ecr.${ECR_REGION}.amazonaws.com/${params.repositoryName}:$${kongVersion} . --build-arg env=${kongEnvironment}`,
   ]
 }
 
-export function kongDeployImageCommand (params:KongCommandProps):string[] {
+export function kongDeployImageCommand (params:K8sDeployProps):string[] {
   const kongTagVersion = getKongTagVersion(params.environment)
   return [
    `docker push ${params.account}.dkr.ecr.${ECR_REGION}.amazonaws.com/${params.repositoryName}:$${kongTagVersion}`,
   ]
 }
 
-export function kongDeployToK8s (params:KongCommandProps) {
+export function kongDeployToK8s (params:K8sDeployProps) {
   if (params.host == undefined) {
     throw Error(`host not provided for ${params.repositoryName}`)
   }
@@ -64,6 +54,7 @@ export function kongDeployToK8s (params:KongCommandProps) {
   const kongTagVersion = getKongTagVersion(params.environment)
   const service = params.repositoryName
   const host = params.host.replace('$env', params.environment)
+  const clusterName = getClusterName(params.environment)
   
   const folder = '.ingress'
 
@@ -89,7 +80,7 @@ export function kongDeployToK8s (params:KongCommandProps) {
     Shell.printFileContents(`${folder}/ingress.yml`),
     // Assume eks deploy role
     ...Shell.assumeAwsRole(EKS_DEPLOY_ROLE),
-    Kubectl.login(),
+    Kubectl.login(clusterName),
     Kubectl.applyFolder(folder)
   ]
 }

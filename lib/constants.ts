@@ -34,6 +34,7 @@ export const CODE_BUILD_RELEASE_ROLE:string = 'code-build-money-release-role';
 export const EKS_DEPLOY_ROLE:string = 'arn:aws:iam::737245153745:role/eks-deploy';
 
 export const EKS_NON_PROD_CLUSTER_NAME:string = 'non-prod';
+export const EKS_PROD_CLUSTER_NAME:string = 'prod';
 
 export const ENVIRONMENT_DEV:string = 'dev';
 

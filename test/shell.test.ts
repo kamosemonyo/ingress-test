@@ -1,5 +1,7 @@
 import { deepStrictEqual } from "assert"
-import { ACCOUNT_PRE, ENV_DEV, GITHUB_ORG } from "../lib/constants"
+import { ACCOUNT_PRE, ENV_DEV, ENV_PROD, GITHUB_ORG } from "../lib/constants"
+import { Shell } from "../lib/shell"
+import { getServiceTagVersion } from "../lib/util"
 import { kongDeployToK8s } from "../pipeline_stage/kong/kong-commands"
 
 describe('Shell command tests', () => {
@@ -37,6 +39,20 @@ describe('Shell command tests', () => {
       host: 'test-host.com',
       replicas: 1
     })
+
+    deepStrictEqual(actual, expected)
+  })
+
+  it('Docker prod image created correctly', () => {
+    const expected = '737245153745.dkr.ecr.eu-west-1.amazonaws.com/kong:$VERSION'
+    const actual = Shell.toDockerImage(ACCOUNT_PRE, 'kong', getServiceTagVersion(ENV_PROD))
+
+    deepStrictEqual(actual, expected)
+  })
+
+  it('Docker dev image created correctly', () => {
+    const expected = '737245153745.dkr.ecr.eu-west-1.amazonaws.com/kong:$SNAPSHOT_VERSION'
+    const actual = Shell.toDockerImage(ACCOUNT_PRE, 'kong', getServiceTagVersion(ENV_DEV))
 
     deepStrictEqual(actual, expected)
   })
