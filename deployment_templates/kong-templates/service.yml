@@ -10,10 +10,14 @@ status:
   loadBalancer: {}
 spec:
   ports:
-    - name: $service
+    - name: http
       protocol: TCP
       port: 8000
       targetPort: 8000
+    - name: https
+      protocol: TCP
+      port: 8443
+      targetPort: 8443
   selector:
     app.kubernetes.io/instance: $deployment
   type: ClusterIP

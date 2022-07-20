@@ -1,0 +1,91 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: github-actions-runner
+  name: github-actions-runner
+spec:
+  replicas: $replicas
+  selector:
+    matchLabels:
+      app: github-actions-runner
+  template:
+    metadata:
+      labels:
+        app: github-actions-runner
+    spec:
+      initContainers:
+        - name: registration-token
+          image: $image
+          imagePullPolicy: Always
+          envFrom:
+            - secretRef:
+                name: github-actions-runner
+          command:
+            - "/bin/sh"
+            - "-c"
+            - "echo REGISTRATION_TOKEN=$(curl -s -X POST -u \"$user\":$token -H \"Accept: application/vnd.github.v3+json\" https://api.github.com/orgs/mmi-holdings-ces/actions/runners/registration-token | jq -r .token) > /tmp/token.env && cat /tmp/token.env"
+          volumeMounts:
+            - mountPath: /tmp
+              name: registration-token
+          resources: 
+            requests:
+              cpu: 100m
+              memory: 50Mi
+            limits:
+              cpu: 100m
+              memory: 50Mi
+
+      containers:
+      - name: ubuntu
+        image: ces-docker.dkrreg.mmih.biz/github-actions-runner:{{ version | default('latest') }}
+        imagePullPolicy: Always
+        envFrom:
+         - secretRef:
+            name: github-actions-runner
+        command:
+          - "/bin/sh"
+          - "-c"
+          - "source /tmp/token.env && ./config.sh --url https://github.com/mmi-holdings-ces --unattended --replace --token $REGISTRATION_TOKEN && ./run.sh"
+        lifecycle:
+          preStop:
+            exec:
+              command:
+                - "/bin/sh"
+                - "-c"
+                - "source /tmp/token.env && ./config.sh remove --token $REGISTRATION_TOKEN"
+        volumeMounts:
+          - mountPath: /tmp
+            name: registration-token
+        resources: 
+            requests:
+              cpu: 700m
+              memory: 400Mi
+            limits:
+              cpu: 1
+              memory: 700Mi
+      volumes:
+        - name: registration-token
+          emptyDir: {} 
+---
+apiVersion: autoscaling/v2beta1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: github-actions-runner
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: github-actions-runner
+  minReplicas: 1
+  maxReplicas: 3
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        targetAverageUtilization: 95
+    - type: Resource
+      resource:
+        name: memory
+        targetAverageUtilization: 95

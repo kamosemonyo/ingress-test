@@ -5,6 +5,7 @@ export interface K8sDeployProps {
     propertiesFilePath:string,
     host?:string,
     replicas?:Number
-    githubOrgName:string
+    githubOrgName:string,
+    dockerBuildArg?:any
 }
 

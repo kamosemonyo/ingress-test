@@ -24,7 +24,8 @@ export const NEXUS_PASSWORD_SSM_KEY:string = '/mmi/nexus/password';
 
 export const K8S_TEMPLATES_BUCKET_NAME:string = 'momentum-money-k8s-templates';
 export const INGRESS_TEMPLATES_BUCKET_NAME:string = 'momentum-money-k8s-ingress-templates';
-export const CODE_BUILD_VPC_NAME:string = 'mmtnonprdVPC';
+export const TELEMETRY_TEMPLATES_BUCKET_NAME:string = 'momentum-money-k8s-telemetry-templates';
+export const CODE_BUILD_VPC_NAME:string = 'mmcoredevVPC';
 export const GITHUB_TOKEN_SECRET_NAME:string = 'github-mmi-holdings-ces-token';
 export const GITHUB_HOST:string = 'github.com';
 export const GITHUB_ORG:string = 'mmi-holdings-ces'
@@ -45,10 +46,14 @@ export const ENV_DEV:string = 'dev'
 export const MAVEN_TEMPLATE:string = 'maven'
 export const KONG_TEMPLATE:string = 'kong'
 export const DOCKER_TEMPLATE:string = 'docker'
+export const TELEMETRY_TEMPLATE:string = 'telemetry'
+export const ANGULAR_TEMPLATE:string = 'angular'
 
 export const RELEASE_VERSION:string = 'VERSION'
 export const DEV_VERSION:string = 'SNAPSHOT_VERSION'
+export const K8S_VERSION:string = 'K8S_VERSION'
 
 export const KONG_DEV_TAG:string = 'SNAPSHOT_VERSION'
 export const KONG_PRE_TAG:string = 'PRE_VERSION'
 export const KONG_PROD_TAG:string = 'PROD_VERSION'
+

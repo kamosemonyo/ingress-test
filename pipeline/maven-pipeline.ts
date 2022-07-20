@@ -4,23 +4,19 @@ import { aws_s3 as s3 } from 'aws-cdk-lib';
 import { aws_codepipeline as codepipeline } from "aws-cdk-lib";
 import { aws_ec2 as ec2 } from "aws-cdk-lib";
 import { getSourceAction } from "../pipeline_stage/code-source";
-import { getClusterName, toValidConstructName } from "../lib/util";
-import { ACCOUNT_PRE, CODE_BUILD_VPC_NAME, ENV_DEV, ENV_PRE, ENV_PROD, MAIN_GIT_BRANCH } from "../lib/constants";
-import { createMavenDeployAction, createMavenDockerBuildAction } from "../pipeline_stage/maven/mvn-build";
+import { toValidConstructName } from "../lib/util";
+import { ACCOUNT_PRE, ACCOUNT_PROD, CODE_BUILD_VPC_NAME, ECR_REGION, ENV_DEV, ENV_PRE, ENV_PROD, MAIN_GIT_BRANCH } from "../lib/constants";
+import { createMavenDockerBuildAction } from "../pipeline_stage/maven/mvn-build";
 import { Effect, PolicyStatement } from "aws-cdk-lib/aws-iam";
 import { updateClusterProject } from "../pipeline_stage/update-cluster";
 import { ManualApprovalAction } from "aws-cdk-lib/aws-codepipeline-actions";
 import { MoneyTags, MoneyTagType } from "../tags/tags";
-
-interface MavenPipelineProps extends StackProps {
-  repositoryName:string,
-  serviceName: string,
-  propertiesFile:string,
-  replicas: Number
-}
+import { createMavenDeployAction } from "../pipeline_stage/maven/mvn-deploy";
+import { ServicePipelineProps } from "./pipeline-props";
+import { getPipelineVPC } from "./pipeline-vpc";
 
 export class MavenPipelineStack extends Stack {
-  constructor(scope: Construct, id: string, props: MavenPipelineProps) {
+  constructor(scope: Construct, id: string, props: ServicePipelineProps) {
     super(scope, id, props);
 
     const artifactsBucket: s3.IBucket = new s3.Bucket(this, 'ArtifactsBucket', {
@@ -68,7 +64,7 @@ export class MavenPipelineStack extends Stack {
 
     const pipeline = new codepipeline.Pipeline(this, `${toValidConstructName(repositoryName)}Pipeline`, {
       restartExecutionOnUpdate: true,
-      pipelineName: `${repositoryName}-${branch}`,
+      pipelineName: `${repositoryName}-pipeline`,
       artifactBucket: artifactsBucket,
     });
 
@@ -95,10 +91,7 @@ export class MavenPipelineStack extends Stack {
       ]
     });
 
-    const vpc = ec2.Vpc.fromLookup(this, 'CodeBuildVpc', {
-      vpcName: CODE_BUILD_VPC_NAME,
-      isDefault: false,
-    });
+    const vpc = getPipelineVPC(this)
 
     pipeline.addStage({
       stageName: 'Build',
@@ -119,20 +112,24 @@ export class MavenPipelineStack extends Stack {
       ],
     });
 
-    // pipeline.addStage({
-    //   stageName: 'Deploy_Dev',
-    //   actions: [
-    //     updateClusterProject(this, {
-    //       input: buildOutputArtifact,
-    //       account: Stack.of(this).account,
-    //       region: Stack.of(this).region,
-    //       branch: branch,
-    //       githubOrg: githubOrgParam.valueAsString,
-    //       repositoryName: repositoryName,
-    //       deployEnv: ENV_DEV
-    //     })
-    //   ]
-    // });
+    pipeline.addStage({
+      stageName: 'Deploy_Dev',
+      actions: [
+        createMavenDeployAction(this, {
+          inputArtifact: sourceCodeArtifact,
+          account: ACCOUNT_PRE,
+          branch: MAIN_GIT_BRANCH,
+          pipelineEnv: ENV_DEV,
+          propertiesFilePath: props.propertiesFile,
+          ssmAccount: ACCOUNT_PRE,
+          ssmRegion: ECR_REGION,
+          pipelineRole: pipeline.role,
+          pomFilePath: props.propertiesFile,
+          repositoryName: props.repositoryName,
+          vpc: vpc
+        })
+      ]
+    });
 
     pipeline.addStage({
       stageName: 'Promote_To_Pre-production',
@@ -147,12 +144,15 @@ export class MavenPipelineStack extends Stack {
       stageName: 'Deploy_Pre-production',
       actions: [
         createMavenDeployAction(this, {
-          inputArtifact: buildOutputArtifact,
-          clusterName: getClusterName(ENV_PRE),
+          inputArtifact: sourceCodeArtifact,
           account: ACCOUNT_PRE,
           branch: MAIN_GIT_BRANCH,
-          environment: ENV_PRE,
-          replicas: props.replicas,
+          pipelineEnv: ENV_PRE,
+          propertiesFilePath: props.propertiesFile,
+          ssmAccount: ACCOUNT_PRE,
+          ssmRegion: ECR_REGION,
+          pipelineRole: pipeline.role,
+          pomFilePath: props.propertiesFile,
           repositoryName: props.repositoryName,
           vpc: vpc
         })
@@ -172,13 +172,16 @@ export class MavenPipelineStack extends Stack {
       stageName: 'Deploy_Prod',
       actions: [
         createMavenDeployAction(this, {
-          inputArtifact: buildOutputArtifact,
-          account: Stack.of(this).account,
-          branch: branch,
-          repositoryName: repositoryName,
-          environment: ENV_PROD,
-          clusterName: getClusterName(ENV_PROD),
-          replicas: props.replicas,
+          inputArtifact: sourceCodeArtifact,
+          account: ACCOUNT_PROD,
+          branch: MAIN_GIT_BRANCH,
+          pipelineEnv: ENV_PROD,
+          propertiesFilePath: props.propertiesFile,
+          ssmAccount: ACCOUNT_PRE,
+          ssmRegion: ECR_REGION,
+          pipelineRole: pipeline.role,
+          pomFilePath: props.propertiesFile,
+          repositoryName: props.repositoryName,
           vpc: vpc
         })
       ]

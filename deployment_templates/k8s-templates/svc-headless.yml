@@ -6,7 +6,8 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: $service-headless
+  name: $service_headless
+  namespace: $namespace
   labels:
     project: momentum-money
     app: $service

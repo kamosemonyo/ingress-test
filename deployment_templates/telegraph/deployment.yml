@@ -1,0 +1,37 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: telegraf-ces-money
+  labels:
+    app: telegraf-ces-money
+    role: telegraf-ces-money
+spec:
+  replicas: 1
+  selector: 
+    matchLabels:
+      app: telegraf-ces-money
+  template:
+    metadata:
+      labels:
+        app: telegraf-ces-money
+    spec:
+      containers:
+      - name: telegraf
+        image: $image
+        imagePullPolicy: Always
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "0.1"
+          limits:
+            memory: "2Gi"
+            cpu: "1"
+        env:
+        # This pulls HOSTNAME from the node, not the pod.
+        - name: "HOSTNAME"
+          value: "telegraf-ces-money"
+        - name: "TELEGRAF_CONFIG_PATH"
+          value: "/data/telegraf/telegraf.conf"
+        - name: "TELEGRAF_CONFIG_DIR"
+          value: "/data/telegraf/telegraf.d"

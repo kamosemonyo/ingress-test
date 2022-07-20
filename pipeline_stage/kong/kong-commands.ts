@@ -62,6 +62,7 @@ export function kongDeployToK8s (params:K8sDeployProps) {
     Shell.s3DownloadFolder(INGRESS_TEMPLATES_BUCKET_NAME, folder),
     // Populate placeholder environment variables on templates
     ...Shell.setDeploymentEnvs({
+      env: params.environment,
       account: params.account,
       region: ECR_REGION,
       namespace: params.environment,

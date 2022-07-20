@@ -1,7 +1,8 @@
 import { Construct } from "constructs";
 import { Account } from "../lib/account";
-import { KONG_TEMPLATE, MAVEN_TEMPLATE } from "../lib/constants";
+import { ANGULAR_TEMPLATE, KONG_TEMPLATE, MAVEN_TEMPLATE, TELEMETRY_TEMPLATE } from "../lib/constants";
 import { Service } from "../service/service";
+import { AngularPipelineStack } from "./angular-pipeline";
 import { KongPipelineStack } from "./kong-pipeline";
 import { MavenPipelineStack } from "./maven-pipeline";
 
@@ -26,6 +27,18 @@ export class PipelineBuilder {
           host: service.host,
           env: Account.forPipeline(env),
         });
+      } else if (service.template == ANGULAR_TEMPLATE) {
+        new AngularPipelineStack(scope, `${service.name}-angular-pipeline`, {
+          repositoryName: service.name,
+          serviceName: service.name,
+          propertiesFile: service.propertiesFile,
+          replicas: service.replicas,
+          host: service.host,
+          env: Account.forPipeline(env),
+        })
+
+      } else if (service.template == TELEMETRY_TEMPLATE) {
+
       }
     }
   }

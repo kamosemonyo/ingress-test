@@ -3,6 +3,7 @@ import { aws_s3 as s3 } from 'aws-cdk-lib';
 import { aws_s3_deployment as s3Deploy } from 'aws-cdk-lib';
 import { Bucket } from 'aws-cdk-lib/aws-s3';
 import { Construct } from 'constructs';
+import { TELEMETRY_TEMPLATES_BUCKET_NAME } from '../lib/constants';
 
 import { S3_DEPLOYMENT_INGRESS_BUCKET, S3_DEPLOYMENT_TEMP_BUCKET, S3_SECRETS_BUCKET } from './constants';
 
@@ -37,6 +38,19 @@ export class K8sTemplatesS3Bucket extends Stack {
     new s3Deploy.BucketDeployment(this, 'KongDeployTemplates', {
       sources: [s3Deploy.Source.asset('./deployment_templates/kong-templates')],
       destinationBucket: kongTemplates,
+      contentType: 'text/plain',
+    });
+
+    const telegraphTemplates = new Bucket(this, 'TelegraphDeploymentBucket', {
+      bucketName: TELEMETRY_TEMPLATES_BUCKET_NAME,
+      versioned: true,
+      autoDeleteObjects: true,
+      removalPolicy: RemovalPolicy.DESTROY
+    });
+
+    new s3Deploy.BucketDeployment(this, 'TelegraphDeployTemplates', {
+      sources: [s3Deploy.Source.asset('./deployment_templates/telegraph')],
+      destinationBucket: telegraphTemplates,
       contentType: 'text/plain',
     });
 

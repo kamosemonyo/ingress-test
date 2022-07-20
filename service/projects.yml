@@ -92,7 +92,8 @@ services:
     replicas:
       pre: 1
       prod: 1
-    propertiesFile: finance-portal/target/maven-archiver/pom.properties
+    propertiesFile: finance-portal/docker/files/pom.properties
+    path: finance-portal
     branches: 
      - migrate
   - name: footprint-services-admin
@@ -165,7 +166,7 @@ services:
       pre: 1
       prod: 1
     propertiesFile: version.properties
-    host: apiv2-$env-internal.multiply.money
+    host: api-aws-$env-internal.multiply.money
     branches: 
      - migrate
   - name: kong-db-less-external
@@ -174,7 +175,7 @@ services:
       pre: 1
       prod: 1
     propertiesFile: version.properties
-    host: apiv2-$env.multiply.money
+    host: api-aws-$env.multiply.money
     branches: 
      - migrate
   - name: member-services

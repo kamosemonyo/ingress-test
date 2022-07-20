@@ -2,7 +2,8 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: $deployment
+  name: $service
+  namespace: $namespace
   labels:
     project: momentum-money
     app: $service
@@ -19,7 +20,7 @@ spec:
         app.kubernetes.io/version: $version
         app.kubernetes.io/component: microservice
       annotations:
-        co.elastic.logs/multiline.pattern: '^\t.*'
+        co.elastic.logs/multiline.pattern: "^\t.*"
         co.elastic.logs/multiline.negate: "true"
         co.elastic.logs/multiline.match: after
         prometheus.io/path: /metrics

@@ -9,3 +9,5 @@ export const AWS_PROD_ACCOUNT = '081138765061';
 export const S3_DEPLOYMENT_TEMP_BUCKET = 'momentum-money-k8s-templates';
 export const S3_DEPLOYMENT_INGRESS_BUCKET = 'momentum-money-k8s-ingress-templates';
 export const S3_SECRETS_BUCKET = 'momentum-money-k8s-secrets';
+
+export const TELEMETRY_VERSION:string = '1.0'

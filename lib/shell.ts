@@ -1,4 +1,8 @@
-import { NEXUS_REPOSITORY, NEXUS_PASSWORD_SSM_KEY, NEXUS_USERNAME_SSM_KEY, ECR_REGION } from "./constants";
+import { dockerCreateBuildArgs } from "../pipeline_stage/eks-deployment";
+import { K8sDeployProps } from "../pipeline_stage/k8sdeploy";
+import { NEXUS_REPOSITORY, NEXUS_PASSWORD_SSM_KEY, NEXUS_USERNAME_SSM_KEY, ECR_REGION, DEV_VERSION, RELEASE_VERSION, K8S_VERSION, K8S_TEMPLATES_BUCKET_NAME, EKS_DEPLOY_ROLE, ENV_PROD } from "./constants";
+import { Kubectl } from "./kubctl";
+import { getClusterName, getServiceTagVersion } from "./util";
 
 const GH_VERSION = '2.4.0';
 const KUBECTL_VERSION = '1.15.0';
@@ -13,8 +17,21 @@ interface KubeEnvProps {
   namespace:string,
   service:string,
   version:string,
+  env:string,
   hostname?:string,
   path?:string
+}
+
+const k8sVars = {
+  namespace: 'namespace',
+  service: 'service',
+  service_headless: 'service_headless',
+  deployment: 'deployment',
+  path: 'path',
+  docker_image: 'docker_image',
+  version: 'version',
+  env: 'env',
+  hostname: 'hostname'
 }
 
 export class Shell {
@@ -44,6 +61,33 @@ export class Shell {
     `envsubst < ~/.m2/settings.tmpl.xml > ~/.m2/settings.xml`,
   ];
 
+  static javaVersion ():string {
+    return 'java -version'
+  }
+
+  static mvnVersion ():string {
+    return 'mvn -version'
+  }
+
+  static mvnCleanInstall ():string {
+    return `mvn clean install`
+  }
+
+  static mvnDeploy ():string {
+    return `mvn deploy`
+  }
+
+  static setVersionFromFile (propertiesFilePath:string):string[] {
+    return [
+      `export ${DEV_VERSION}=\`grep -oP \'version=\\K.*\' ${propertiesFilePath}\``,
+      `echo "current new snapshot version $${DEV_VERSION}"`,
+      'export VERSION=$(echo ${SNAPSHOT_VERSION} |awk -F "-" \'{print $1}\')',
+      'echo "Resolved new version $VERSION"',
+      `echo $${RELEASE_VERSION} > VERSION`,
+      `cp ${propertiesFilePath} docker/files`
+    ]
+  }
+
   static installGithubCLI = ():string[] => [
     `echo \"Installing Github CLI v${GH_VERSION} in $PWD/bin\"`,
     `mkdir -p bin`,
@@ -67,6 +111,64 @@ export class Shell {
     'yq --version',
     'yq --help'
   ];
+
+  static dockerBuildAndDeploy (params:K8sDeployProps):string[] {
+    const serviceTagVersion = getServiceTagVersion(params.environment)
+    let buildCommand = Shell.buildDockerImage(params.account, params.repositoryName, serviceTagVersion)
+
+    if (params.dockerBuildArg !== undefined) {
+      buildCommand = buildCommand.concat(
+        dockerCreateBuildArgs(params.dockerBuildArg)
+      )
+    }
+
+    const pushImageCommands = (params.environment !== ENV_PROD) ? [
+      Shell.ecrLogin(params.account),
+      buildCommand,
+      Shell.dockerPush(params.account, params.repositoryName, serviceTagVersion)
+    ]: []
+
+    return pushImageCommands
+  }
+
+  static  eksDeployServiceToK8s (params:K8sDeployProps):string[] {
+    const serviceTagVersion = getServiceTagVersion(params.environment)
+    const service = params.repositoryName
+    const clusterName = getClusterName(params.environment)
+  
+    const folder = '.service'
+  
+    return [
+      Shell.s3DownloadFolder(K8S_TEMPLATES_BUCKET_NAME, folder),
+      // Populate placeholder environment variables on templates
+      ...Shell.setDeploymentEnvs({
+        env: params.environment,
+        account: params.account,
+        region: ECR_REGION,
+        namespace: params.environment,
+        service: service,
+        version: serviceTagVersion,
+        hostname: params.host
+      }),
+      // Create deployment manifest file
+      Shell.replaceEnvPlaceHolderValues(`${folder}/deployment.yml`),
+      Shell.printFileContents(`${folder}/deployment.yml`),
+      // Create service manifest files
+      Shell.replaceEnvPlaceHolderValues(`${folder}/svc.yml`),
+      Shell.printFileContents(`${folder}/svc.yml`),
+      // Create headless service manifest file
+      Shell.replaceEnvPlaceHolderValues(`${folder}/svc-headless.yml`),
+      Shell.printFileContents(`${folder}/svc-headless.yml`),
+      // Assume eks deploy role
+      ...Shell.assumeAwsRole(EKS_DEPLOY_ROLE),
+      Kubectl.login(clusterName),
+      Kubectl.applyFolder(folder)
+    ]
+  }
+
+  static envbustVersion():string {
+    return 'envsubst --version'
+  }
 
   static updateCluster = (repo:string , env:string, githubOrg:string):string[] => [
     `git clone https://$GITHUB_AUTH_TOKEN@github.com/${githubOrg}/${CLUSTER_REPO}.git .crepo`,
@@ -116,55 +218,66 @@ export class Shell {
 
   static setDeploymentEnvs (props:KubeEnvProps):string[] {
     const path = (props.path !== undefined) ? props.path : props.service
-    const deployment = props.service + `-$(echo $${props.version})`
+    const deployment = props.service + `-$(echo $${K8S_VERSION})`
     const dockerImage = Shell.toDockerImage(props.account, props.service, props.version)
 
     const commands = [
-      Shell.setEnvironmentVar('namespace', props.namespace),
-      Shell.setEnvironmentVar('service', props.service),
-      Shell.setEnvironmentVar('service-headless', props.service.concat('-service-hl')),
-      Shell.setEnvironmentVar('deployment', deployment),
-      Shell.setEnvironmentVar('path', path),
-      Shell.setEnvironmentVar('docker_image', dockerImage),
+      Shell.exportEnvironmentVar(k8sVars.version, `$${props.version}`),
+      Shell.setEnvironmentVar(K8S_VERSION, `$(echo "$${props.version}" | tr '[:upper:]' '[:lower:]'|  tr -d .)`),
+      Shell.exportEnvironmentVar(k8sVars.namespace, props.namespace),
+      Shell.exportEnvironmentVar(k8sVars.service, props.service),
+      Shell.exportEnvironmentVar(k8sVars.service_headless, props.service.concat('-service-hl')),
+      Shell.exportEnvironmentVar(k8sVars.deployment, deployment),
+      Shell.exportEnvironmentVar(k8sVars.path, path),
+      Shell.exportEnvironmentVar(k8sVars.docker_image, dockerImage),
+      Shell.exportEnvironmentVar(k8sVars.env, props.env),
     ]
 
     if (props.hostname !== undefined) {
-      commands.push(Shell.setEnvironmentVar('hostname', props.hostname))
+      commands.push(Shell.exportEnvironmentVar('hostname', props.hostname))
     }
 
     return commands
   }
 
+  static replaceEnvPlaceHolderValues (filepath:string):string {
+    const extensions = filepath.split('.')
+    const extension = extensions[extensions.length - 1]
+
+    return `envsubst < ${filepath} > tmp.${extension} && mv tmp.${extension} ${filepath}`
+  }
+
+
   static setNamespaceEnv (value:string) {
-    return Shell.setEnvironmentVar('namespace', value)
+    return Shell.exportEnvironmentVar('namespace', value)
   }
 
   static setServiceEnv (value:string) {
-    return Shell.setEnvironmentVar('service', value)
+    return Shell.exportEnvironmentVar('service', value)
   }
 
   static setHeadlessServiceEnv (value:string) {
-    return Shell.setEnvironmentVar('service-headless', value)
+    return Shell.exportEnvironmentVar('service-headless', value)
   }
 
   static setDeploymentEnv (value:string) {
-    return Shell.setEnvironmentVar('deployment', value)
+    return Shell.exportEnvironmentVar('deployment', value)
   }
 
   static setHostnameEnv (value:string) {
-    return Shell.setEnvironmentVar('hostname', value)
+    return Shell.exportEnvironmentVar('hostname', value)
   }
 
   static setDockerImageEnv (value:string) {
-    return Shell.setEnvironmentVar('docker_image', value)
+    return Shell.exportEnvironmentVar('docker_image', value)
+  }
+
+  static exportEnvironmentVar(varname:string, value:string) {
+    return `export ${varname}=${value}`
   }
 
   static setEnvironmentVar(varname:string, value:string) {
     return `${varname}=${value}`
-  }
-
-  static replaceEnvPlaceHolderValues (filepath:string) {
-    return `eval "echo \\"$(cat ${filepath})\\"" > ${filepath}`
   }
 
   static createImage (account:string, region:string, service:string, versionTag:string) {
@@ -175,7 +288,7 @@ export class Shell {
     return repositoryName + `-$(echo $${version})`
   }
 
-  static printFileContents (filepath:string) {
+  static printFileContents (filepath:string):string {
     return `cat ${filepath}`
   }
 };

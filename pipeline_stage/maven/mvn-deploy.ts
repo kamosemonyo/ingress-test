@@ -3,13 +3,14 @@ import { CodeBuildAction } from "aws-cdk-lib/aws-codepipeline-actions";
 import { BuildSpec, PipelineProject } from 'aws-cdk-lib/aws-codebuild';
 import { Artifact } from 'aws-cdk-lib/aws-codepipeline';
 import { getClusterName, getServiceTagVersion, toValidConstructName } from '../../lib/util';
-import { CODE_BUILD_SPEC_VERSION, DEFAULT_CODE_BUILD_ENVIRONMENT, ECR_REGION, EKS_DEPLOY_ROLE, GITHUB_HOST, GITHUB_ORG, K8S_TEMPLATES_BUCKET_NAME, MAIN_GIT_BRANCH, NEXUS_REPOSITORY } from '../../lib/constants';
-import { IVpc } from 'aws-cdk-lib/aws-ec2';
+import { CODE_BUILD_SPEC_VERSION, DEFAULT_CODE_BUILD_ENVIRONMENT, ECR_REGION, EKS_DEPLOY_ROLE, ENV_DEV, ENV_PRE, ENV_PROD, GITHUB_HOST, GITHUB_ORG, K8S_TEMPLATES_BUCKET_NAME, MAIN_GIT_BRANCH, NEXUS_REPOSITORY } from '../../lib/constants';
+import { IVpc, SubnetType } from 'aws-cdk-lib/aws-ec2';
 import { Shell } from '../../lib/shell';
 import { IPrincipal } from 'aws-cdk-lib/aws-iam';
 import { K8sDeployProps } from '../k8sdeploy';
 import { Kubectl } from '../../lib/kubctl';
 import { Bucket } from 'aws-cdk-lib/aws-s3';
+import { MoneyRoleBuilder } from '../money-role-builder';
 
 interface parameters {
   branch: string
@@ -19,18 +20,17 @@ interface parameters {
   ssmRegion: string
   ssmAccount: string,
   inputArtifact: Artifact
-  outputArtifact: Artifact
+  outputArtifact?: Artifact
   vpc?: IVpc,
   pipelineRole: IPrincipal,
   pipelineEnv:string,
   account:string
 };
 
-const createMavenDeployAction = (scope: Construct, params: parameters): CodeBuildAction => {
+export const createMavenDeployAction = (scope: Construct, params: parameters): CodeBuildAction => {
   const buildAction = new CodeBuildAction({
     actionName: 'Maven_Deploy',
     input: params.inputArtifact,
-    outputs: [params.outputArtifact],
     project: createMavenDeployProject(scope, params),
   });
 
@@ -38,11 +38,23 @@ const createMavenDeployAction = (scope: Construct, params: parameters): CodeBuil
 };
 
 const createMavenDeployProject = (scope: Construct, params: parameters): PipelineProject => {
-  const buildProject = new PipelineProject(scope, `${toValidConstructName(params.repositoryName)}CodeBuildProject`, {
-    projectName: `${params.repositoryName}-${params.branch}-deploy`,
+  const role = MoneyRoleBuilder.buildEksDeployRole(
+    scope,
+    params.pipelineEnv,
+    params.repositoryName,
+    params.account
+  );
+
+  const buildProject = new PipelineProject(scope, `${toValidConstructName(params.repositoryName)}-Deploy-${params.pipelineEnv}`, {
+    role: role,
+    projectName: `${params.repositoryName}-deploy-${params.pipelineEnv}`,
     buildSpec: buildMavenDeploySpec(params),
     environment: DEFAULT_CODE_BUILD_ENVIRONMENT,
     vpc: params.vpc,
+    subnetSelection: {
+      onePerAz: true,
+      subnetType: SubnetType.PRIVATE_ISOLATED
+    }
   });
 
   const buckerId = `momentum-money-k8s-templates-${params.repositoryName}-${params.pipelineEnv}`;
@@ -57,7 +69,7 @@ const createMavenDeployProject = (scope: Construct, params: parameters): Pipelin
   return buildProject;
 }
 
-export function mavenDeployToK8s (params:K8sDeployProps):string[] {
+export function  mavenDeployToK8s (params:K8sDeployProps):string[] {
   const serviceTagVersion = getServiceTagVersion(params.environment)
   const service = params.repositoryName
   const clusterName = getClusterName(params.environment)
@@ -68,6 +80,7 @@ export function mavenDeployToK8s (params:K8sDeployProps):string[] {
     Shell.s3DownloadFolder(K8S_TEMPLATES_BUCKET_NAME, folder),
     // Populate placeholder environment variables on templates
     ...Shell.setDeploymentEnvs({
+      env: params.environment,
       account: params.account,
       region: ECR_REGION,
       namespace: params.environment,
@@ -100,28 +113,35 @@ const buildMavenDeploySpec = (params: parameters): BuildSpec => {
     repositoryName: params.repositoryName
   }
 
+  const serviceTagVersion = getServiceTagVersion(params.pipelineEnv)
+  const pushImageCommands = (params.pipelineEnv !== ENV_PROD) ? [
+    Shell.ecrLogin(params.account),
+    Shell.buildDockerImage(params.account, params.repositoryName, serviceTagVersion),
+    Shell.dockerPush(params.account, params.repositoryName, serviceTagVersion)
+  ]: []
+
   const buildSpec = BuildSpec.fromObject({
     version: CODE_BUILD_SPEC_VERSION,
     phases: {
       install: {
-        runtime_versions: {
+        'runtime-versions': {
           java: 'corretto8'
-        },
-        commands: [
-          ...Shell.installYq(),
-        ]
+        }
       },
       build: {
         commands: [
-          'java -version',
-          'mvn -version',
+          Shell.javaVersion(),
+          Shell.mvnVersion(),
+          Shell.envbustVersion(),
           ...Shell.setupMvnSettings(params.ssmRegion),
-          'mvn deploy',
+          Shell.mvnCleanInstall(),
+          ...Shell.setVersionFromFile(params.propertiesFilePath),
+          ...Shell.dockerBuildAndDeploy(deploySpecProps)
         ]
       },
       post_build: {
         commands: [
-          ...mavenDeployToK8s({
+          ...Shell.eksDeployServiceToK8s({
             account: params.account,
             environment: params.pipelineEnv,
             githubOrgName: GITHUB_ORG,

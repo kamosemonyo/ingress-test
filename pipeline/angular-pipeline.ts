@@ -1,5 +1,5 @@
 import { CfnParameter, RemovalPolicy, Stack, StackProps } from "aws-cdk-lib";
-import { Artifact, Pipeline, PipelineProps } from "aws-cdk-lib/aws-codepipeline";
+import { Artifact, Pipeline } from "aws-cdk-lib/aws-codepipeline";
 import { ManualApprovalAction } from "aws-cdk-lib/aws-codepipeline-actions";
 import { Vpc } from "aws-cdk-lib/aws-ec2";
 import { Effect, PolicyStatement } from "aws-cdk-lib/aws-iam";
@@ -7,16 +7,22 @@ import { Bucket, IBucket } from "aws-cdk-lib/aws-s3";
 import { Construct } from "constructs";
 import { CODE_BUILD_VPC_NAME, ENV_DEV, ENV_PRE, ENV_PROD, GITHUB_ORG, MAIN_GIT_BRANCH } from "../lib/constants";
 import { toValidConstructName } from "../lib/util";
+import { createAngularDockerBuildAction } from "../pipeline_stage/angular/angular-build";
+import { createAngularDeployAction } from "../pipeline_stage/angular/angular-deploy";
 import { getSourceAction } from "../pipeline_stage/code-source";
-import { createKongDockerBuildAction } from "../pipeline_stage/kong/kong-build";
-import { createKongDeployAction } from "../pipeline_stage/kong/kong-deploy";
-import { updateClusterProject } from "../pipeline_stage/update-cluster";
 import { MoneyTags } from "../tags/tags";
-import { ServicePipelineProps } from "./pipeline-props";
 import { getPipelineVPC } from "./pipeline-vpc";
 
-export class KongPipelineStack extends Stack {
-  constructor(scope: Construct, id: string, props: ServicePipelineProps) {
+interface AngularPipelineProps extends StackProps {
+  repositoryName:string,
+  serviceName: string,
+  propertiesFile:string,
+  replicas: Number,
+  host?:string
+}
+
+export class AngularPipelineStack extends Stack {
+  constructor(scope: Construct, id: string, props: AngularPipelineProps) {
     super(scope, id, props);
 
      const artifactsBucket:IBucket = new Bucket(this, 'ArtifactsBucket', {
@@ -52,15 +58,12 @@ export class KongPipelineStack extends Stack {
 
     const repositoryName = props.repositoryName;
     const branch: string = MAIN_GIT_BRANCH;
-    const pomFile = 'pom.xml'
 
     if (!repositoryName) {
       throw Error('Expected context [repositoryName] to be defined.');
     }
 
     const sourceCodeArtifact = new Artifact();
-    const buildOutputArtifact = new Artifact();
-
 
     const pipeline = new Pipeline(this, `${toValidConstructName(repositoryName)}Pipeline`, {
       restartExecutionOnUpdate: true,
@@ -97,18 +100,17 @@ export class KongPipelineStack extends Stack {
     pipeline.addStage({
       stageName: 'Build',
       actions: [
-        createKongDockerBuildAction(this, {
-          vpc: vpc,
-          branch: branch,
-          repositoryName: repositoryName,
-          account: Stack.of(this).account,
-          region: Stack.of(this).region,
-          propertiesFilePath: props.propertiesFile,
-          pomFilePath: pomFile,
-          inputArtifact: sourceCodeArtifact,
-          outputArtifact: buildOutputArtifact,
-          environment: ENV_DEV,
-          githubOrgName: githubOrgParam.valueAsString
+        createAngularDockerBuildAction(this, {
+            vpc: vpc,
+            inputArtifact: sourceCodeArtifact,
+            account: Stack.of(this).account,
+            region: Stack.of(this).region,
+            branch: branch,
+            repositoryName: repositoryName,
+            environment: ENV_DEV,
+            githubOrgName: GITHUB_ORG,
+            propertiesFilePath: props.propertiesFile,
+            host: props.host
         })
       ]
     });
@@ -116,7 +118,7 @@ export class KongPipelineStack extends Stack {
     pipeline.addStage({
       stageName: 'Deploy_Dev',
       actions: [
-        createKongDeployAction(this, {
+        createAngularDeployAction(this, {
           vpc: vpc,
           inputArtifact: sourceCodeArtifact,
           account: Stack.of(this).account,
@@ -143,7 +145,7 @@ export class KongPipelineStack extends Stack {
     pipeline.addStage({
       stageName:'Deploy_To_Preprod',
       actions: [
-        createKongDeployAction(this, {
+        createAngularDeployAction(this, {
           vpc: vpc,
           branch: branch,
           repositoryName: repositoryName,
@@ -170,7 +172,7 @@ export class KongPipelineStack extends Stack {
     pipeline.addStage({
       stageName: 'Deploy_To_Production',
       actions: [
-        createKongDeployAction(this, {
+        createAngularDeployAction(this, {
           vpc: vpc,
           branch: branch,
           githubOrgName: GITHUB_ORG,
